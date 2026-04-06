@@ -40,7 +40,7 @@ def create_app():
         instance_relative_config=False,
     )
 
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-only-change-in-production')
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'warrior-ready-handoff-2026-fallback-key'
     app.config['DATABASE_PATH'] = os.environ.get(
         'DATABASE_PATH',
         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'instance', 'handoff.db'),
