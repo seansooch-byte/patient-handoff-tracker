@@ -7,6 +7,31 @@ from . import db as database
 from . import auth
 
 
+def _auto_seed(app):
+    """Seed demo users + data if DB is empty (for Render deploys)."""
+    from .db import get_db
+    from werkzeug.security import generate_password_hash
+    db = get_db()
+    existing = db.execute('SELECT COUNT(*) as c FROM users').fetchone()['c']
+    if existing > 0:
+        return
+    pw_hash = generate_password_hash('demo')
+    for username, display_name, role in [
+        ('achen', 'Dr. Amy Chen', 'attending'),
+        ('rpatel', 'Dr. Raj Patel', 'resident'),
+        ('mwilliams', 'Dr. Maya Williams', 'resident'),
+        ('jnurse', 'Jamie Torres, RN', 'nurse'),
+    ]:
+        db.execute('INSERT INTO users (username, password_hash, display_name, role) VALUES (?, ?, ?, ?)',
+                   (username, pw_hash, display_name, role))
+    db.commit()
+    seed_path = os.path.join(os.path.dirname(__file__), '..', 'schema', 'seed_data.sql')
+    if os.path.exists(seed_path):
+        with open(seed_path, 'r') as f:
+            db.executescript(f.read())
+    print('Auto-seeded database with demo data.')
+
+
 def create_app():
     app = Flask(
         __name__,
@@ -26,6 +51,11 @@ def create_app():
 
     # Register database teardown
     database.init_app(app)
+
+    # Auto-initialize DB + seed on first run (needed for Render's ephemeral filesystem)
+    with app.app_context():
+        database.init_db()
+        _auto_seed(app)
 
     # Register auth (Flask-Login + auth blueprint)
     auth.init_app(app)
