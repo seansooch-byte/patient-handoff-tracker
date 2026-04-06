@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Handoff — Handoff Tracker{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/css/handoff.css">
+<link rel="stylesheet" href="/static/css/print.css" media="print">
+{% endblock %}
+
+{% block content %}
+<div class="handoff-view">
+
+  <!-- Back + actions -->
+  <div class="no-print" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--sp-4);">
+    <a href="/board" style="display:flex; align-items:center; gap: var(--sp-2); color: var(--text-secondary); font-size: var(--fs-sm);">
+      &larr; Back to Board
+    </a>
+    <div style="display:flex; gap: var(--sp-2);">
+      <button class="btn btn-outline btn-sm" onclick="window.print()">Print</button>
+    </div>
+  </div>
+
+  <!-- Dynamic content loaded by handoff-view.js -->
+  <div id="handoff-content">
+    <div class="empty-state"><p>Loading handoff...</p></div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+<script src="/static/js/handoff-view.js"></script>
+{% endblock %}

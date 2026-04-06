@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}SBAR Handoff — Handoff Tracker{% endblock %}
+{% block styles %}
+<link rel="stylesheet" href="/static/css/handoff.css">
+{% endblock %}
+
+{% block content %}
+<div class="handoff-form">
+
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--sp-4);">
+    <a href="/board" style="display:flex; align-items:center; gap: var(--sp-2); color: var(--text-secondary); font-size: var(--fs-sm);">
+      &larr; Back to Board
+    </a>
+    <div class="mode-toggle">
+      <button id="mode-ipass" onclick="location.href='/handoff/new?patient='+currentPatientId">I-PASS</button>
+      <button class="active" id="mode-sbar">SBAR</button>
+    </div>
+  </div>
+
+  <div class="handoff-patient-bar" id="patient-bar">
+    <div class="handoff-patient-info">
+      <div class="handoff-patient-name" style="color: var(--text-muted);">Loading patient...</div>
+    </div>
+  </div>
+
+  <form id="sbar-form">
+
+    <!-- S — Situation -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="form-section-letter" style="background: var(--critical);">S</div>
+        <div>
+          <div class="form-section-title">Situation</div>
+          <div class="form-section-subtitle">What is happening right now?</div>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="form-group">
+          <label class="form-label" for="severity">Illness Severity *</label>
+          <div class="severity-options">
+            <div class="severity-option critical">
+              <input type="radio" name="severity" id="sev-critical" value="critical">
+              <label for="sev-critical">Critical</label>
+            </div>
+            <div class="severity-option serious">
+              <input type="radio" name="severity" id="sev-serious" value="serious">
+              <label for="sev-serious">Serious</label>
+            </div>
+            <div class="severity-option watch">
+              <input type="radio" name="severity" id="sev-watch" value="watch" checked>
+              <label for="sev-watch">Watch</label>
+            </div>
+            <div class="severity-option stable">
+              <input type="radio" name="severity" id="sev-stable" value="stable">
+              <label for="sev-stable">Stable</label>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="situation">Situation *</label>
+          <textarea class="form-textarea" id="situation" name="sbar_situation" rows="2" placeholder="I am calling about [patient] who is [current problem]..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- B — Background -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="form-section-letter" style="background: var(--primary);">B</div>
+        <div>
+          <div class="form-section-title">Background</div>
+          <div class="form-section-subtitle">What is the clinical context?</div>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="form-group">
+          <label class="form-label" for="background">Background</label>
+          <textarea class="form-textarea" id="background" name="sbar_background" rows="3" placeholder="Relevant history, admission reason, recent changes..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- A — Assessment -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="form-section-letter" style="background: var(--serious);">A</div>
+        <div>
+          <div class="form-section-title">Assessment</div>
+          <div class="form-section-subtitle">What do you think the problem is?</div>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="form-group">
+          <label class="form-label" for="assessment">Assessment</label>
+          <textarea class="form-textarea" id="assessment" name="sbar_assessment" rows="2" placeholder="I think the problem is... The patient is deteriorating / stable / improving..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- R — Recommendation -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="form-section-letter" style="background: var(--stable);">R</div>
+        <div>
+          <div class="form-section-title">Recommendation</div>
+          <div class="form-section-subtitle">What do you need?</div>
+        </div>
+      </div>
+      <div class="form-section-body">
+        <div class="form-group">
+          <label class="form-label" for="recommendation">Recommendation</label>
+          <textarea class="form-textarea" id="recommendation" name="sbar_recommendation" rows="2" placeholder="I recommend... I need you to... Are you able to..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-footer">
+      <button type="button" class="btn btn-outline" id="save-draft-sbar">Save Draft</button>
+      <button type="submit" class="btn btn-primary btn-lg">Send SBAR</button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+let currentPatientId = new URLSearchParams(window.location.search).get('patient');
+
+async function initSbarForm() {
+  if (currentPatientId) {
+    try {
+      const patient = await api.get('/api/patients/' + currentPatientId);
+      const sevMap = {1:'critical',2:'serious',3:'watch',4:'stable',5:'stable'};
+      const sevLabel = {1:'Critical',2:'Serious',3:'Watch',4:'Stable',5:'Stable'};
+      const sev = sevMap[patient.acuity] || 'stable';
+      document.getElementById('patient-bar').innerHTML = `
+        <div class="handoff-patient-info"><div>
+          <div class="handoff-patient-name">${patient.display_name}</div>
+          <div class="handoff-patient-details">
+            <span>${patient.age||''}${patient.sex||''}</span>
+            <span>MRN ${patient.mrn}</span>
+            <span>Room ${patient.room_bed||''}</span>
+            <span class="badge badge-${sev}">${sevLabel[patient.acuity]||'Stable'}</span>
+          </div>
+        </div></div>
+        <div style="text-align:right;font-size:var(--fs-xs);color:var(--text-muted);">
+          <div>Chief Complaint</div>
+          <div style="color:var(--text);font-size:var(--fs-sm);">${patient.chief_complaint||'N/A'}</div>
+        </div>`;
+      const radio = document.querySelector('input[name="severity"][value="'+sev+'"]');
+      if (radio) radio.checked = true;
+    } catch(e) { console.error(e); }
+  }
+}
+
+document.getElementById('sbar-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const situation = document.getElementById('situation').value;
+  if (!situation) { alert('Situation is required'); return; }
+
+  const btn = this.querySelector('button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Sending...';
+  try {
+    const result = await api.post('/api/handoffs', {
+      patient_id: parseInt(currentPatientId),
+      illness_severity: document.querySelector('input[name="severity"]:checked')?.value || 'watch',
+      one_liner: situation.substring(0, 200),
+      handoff_type: 'sbar',
+      sbar_situation: situation,
+      sbar_background: document.getElementById('background').value,
+      sbar_assessment: document.getElementById('assessment').value,
+      sbar_recommendation: document.getElementById('recommendation').value,
+      status: 'sent',
+      action_items: []
+    });
+    window.location.href = '/handoff/' + result.id;
+  } catch(err) {
+    alert('Error: ' + err.message);
+    btn.disabled = false; btn.textContent = 'Send SBAR';
+  }
+});
+
+document.addEventListener('DOMContentLoaded', initSbarForm);
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+{% endblock %}

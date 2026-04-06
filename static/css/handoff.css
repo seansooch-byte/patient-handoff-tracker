@@ -1,0 +1,333 @@
+/* Handoff form and view styles */
+
+/* ---- Form layout ---- */
+.handoff-form {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.form-section {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--sp-4);
+  overflow: hidden;
+}
+
+.form-section-header {
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.form-section-letter {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: var(--fs-lg);
+  color: white;
+  flex-shrink: 0;
+}
+
+.letter-I { background: var(--critical); }
+.letter-P { background: var(--primary); }
+.letter-A { background: var(--serious); }
+.letter-S1 { background: var(--watch); }
+.letter-S2 { background: var(--stable); }
+
+.form-section-title {
+  font-weight: 600;
+  font-size: var(--fs-base);
+}
+
+.form-section-subtitle {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.form-section-body {
+  padding: var(--sp-4);
+}
+
+/* ---- Patient header in form ---- */
+.handoff-patient-bar {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.handoff-patient-info {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.handoff-patient-name {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+}
+
+.handoff-patient-details {
+  display: flex;
+  gap: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+/* ---- Mode toggle (I-PASS / SBAR) ---- */
+.mode-toggle {
+  display: inline-flex;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 3px;
+  gap: 2px;
+}
+
+.mode-toggle button {
+  padding: var(--sp-2) var(--sp-4);
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  font-family: var(--font);
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.mode-toggle button.active {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- Action items in form ---- */
+.action-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.action-item-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--surface);
+  border-radius: var(--radius);
+}
+
+.action-item-row .form-input {
+  flex: 1;
+  background: var(--card);
+}
+
+.action-item-row .form-select {
+  width: 120px;
+  background: var(--card);
+}
+
+.action-item-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--sp-1);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+.action-item-remove:hover { color: var(--danger); }
+
+.add-action-btn {
+  width: 100%;
+  padding: var(--sp-2);
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  font-family: var(--font);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.add-action-btn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-bg);
+}
+
+/* ---- Form footer ---- */
+.form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--sp-4) 0;
+  border-top: 1px solid var(--border-light);
+  margin-top: var(--sp-4);
+}
+
+/* ---- Handoff view (read-only) ---- */
+.handoff-view {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.handoff-section {
+  background: var(--card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--sp-3);
+  overflow: hidden;
+}
+
+.handoff-section-header {
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.handoff-section-body {
+  padding: var(--sp-4);
+}
+
+.handoff-field {
+  margin-bottom: var(--sp-3);
+}
+.handoff-field:last-child { margin-bottom: 0; }
+
+.handoff-field-label {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: var(--sp-1);
+}
+
+.handoff-field-value {
+  font-size: var(--fs-base);
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.handoff-field-value.empty {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Action items in view */
+.action-item-view {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-light);
+}
+.action-item-view:last-child { border-bottom: none; }
+
+.action-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  margin-top: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.action-checkbox.checked {
+  background: var(--stable);
+  border-color: var(--stable);
+  color: white;
+}
+
+.action-item-text {
+  flex: 1;
+}
+.action-item-text.completed {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+/* Verification section */
+.verification-section {
+  background: var(--primary-bg);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-4);
+  margin-top: var(--sp-4);
+}
+
+.verification-section h3 {
+  color: var(--primary);
+  margin-bottom: var(--sp-3);
+}
+
+/* Status timeline */
+.handoff-timeline {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  font-size: var(--fs-xs);
+}
+
+.timeline-step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--text-muted);
+}
+.timeline-step.active { color: var(--primary); font-weight: 600; }
+.timeline-step.done { color: var(--stable); }
+
+.timeline-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+}
+.timeline-step.active .timeline-dot { background: var(--primary); }
+.timeline-step.done .timeline-dot { background: var(--stable); }
+
+.timeline-line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  min-width: 20px;
+}
+.timeline-line.done { background: var(--stable); }
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .handoff-patient-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .action-item-row {
+    flex-wrap: wrap;
+  }
+
+  .action-item-row .form-select {
+    width: 100%;
+  }
+}

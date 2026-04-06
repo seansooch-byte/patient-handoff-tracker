@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% block title %}QI Dashboard — Handoff Tracker{% endblock %}
+{% block styles %}
+<style>
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    box-shadow: var(--shadow-sm);
+  }
+  .stat-value {
+    font-size: var(--fs-2xl);
+    font-weight: 700;
+    color: var(--text);
+  }
+  .stat-label {
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-top: var(--sp-1);
+  }
+  .stat-sub {
+    font-size: var(--fs-xs);
+    color: var(--text-secondary);
+    margin-top: var(--sp-2);
+  }
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--sp-4);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: var(--sp-4);
+  }
+  .chart-title {
+    font-size: var(--fs-base);
+    font-weight: 600;
+    margin-bottom: var(--sp-3);
+  }
+  .chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+  }
+  @media (max-width: 768px) { .chart-row { grid-template-columns: 1fr; } }
+  .compliance-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-3);
+  }
+  .compliance-bar-label {
+    font-size: var(--fs-sm);
+    width: 180px;
+    flex-shrink: 0;
+  }
+  .compliance-bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .compliance-bar-fill {
+    height: 100%;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: var(--sp-2);
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: white;
+    min-width: 40px;
+    transition: width 0.6s ease;
+  }
+  .export-btn { margin-left: auto; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
+  <div>
+    <h1 class="page-title">QI Dashboard</h1>
+    <p class="page-subtitle">Handoff quality metrics for Joint Commission compliance</p>
+  </div>
+  <a href="/api/metrics/export" class="btn btn-outline export-btn">Export CSV</a>
+</div>
+
+<!-- Summary stats -->
+<div class="dashboard-grid" id="stats-grid">
+  <div class="stat-card">
+    <div class="stat-value" id="stat-total">-</div>
+    <div class="stat-label">Total Handoffs</div>
+    <div class="stat-sub" id="stat-type-breakdown"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="stat-verified">-</div>
+    <div class="stat-label">Verified (Read-back)</div>
+    <div class="stat-sub" id="stat-verify-rate"></div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="stat-duration">-</div>
+    <div class="stat-label">Avg Duration</div>
+    <div class="stat-sub">Time from creation to verification</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value" id="stat-actions">-</div>
+    <div class="stat-label">Action Item Completion</div>
+    <div class="stat-sub" id="stat-actions-detail"></div>
+  </div>
+</div>
+
+<!-- Compliance bars -->
+<div class="chart-card">
+  <div class="chart-title">Joint Commission Compliance Indicators</div>
+  <div id="compliance-bars"></div>
+</div>
+
+<!-- Charts row -->
+<div class="chart-row">
+  <div class="chart-card">
+    <div class="chart-title">Handoff Status Distribution</div>
+    <canvas id="status-chart" height="250"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-title">Severity Distribution</div>
+    <canvas id="severity-chart" height="250"></canvas>
+  </div>
+</div>
+
+<div class="chart-card">
+  <div class="chart-title">Handoffs Over Time</div>
+  <canvas id="timeline-chart" height="200"></canvas>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+async function loadDashboard() {
+  try {
+    const data = await api.get('/api/metrics/summary');
+    renderStats(data);
+    renderCompliance(data.compliance);
+    renderStatusChart(data.status_counts);
+    renderSeverityChart(data.severity);
+    renderTimelineChart(data.over_time);
+  } catch (err) {
+    console.error('Dashboard error:', err);
+  }
+}
+
+function renderStats(data) {
+  const sc = data.status_counts;
+  const total = Object.values(sc).reduce((a,b) => a+b, 0);
+  const verified = sc.verified || 0;
+  const c = data.compliance || {};
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-type-breakdown').textContent =
+    `${data.type_counts.ipass||0} I-PASS / ${data.type_counts.sbar||0} SBAR`;
+
+  document.getElementById('stat-verified').textContent = verified;
+  document.getElementById('stat-verify-rate').textContent =
+    total > 0 ? `${Math.round(verified/total*100)}% verification rate` : 'No data';
+
+  const avgDur = c.avg_duration;
+  if (avgDur && avgDur > 0) {
+    const mins = Math.round(avgDur / 60);
+    document.getElementById('stat-duration').textContent = mins > 0 ? mins + 'm' : '<1m';
+  } else {
+    document.getElementById('stat-duration').textContent = 'N/A';
+  }
+
+  const totalActions = c.total_actions || 0;
+  const completedActions = c.completed_actions || 0;
+  if (totalActions > 0) {
+    document.getElementById('stat-actions').textContent =
+      Math.round(completedActions/totalActions*100) + '%';
+    document.getElementById('stat-actions-detail').textContent =
+      `${completedActions} of ${totalActions} items completed`;
+  } else {
+    document.getElementById('stat-actions').textContent = 'N/A';
+    document.getElementById('stat-actions-detail').textContent = 'No action items yet';
+  }
+}
+
+function renderCompliance(c) {
+  if (!c || !c.total) { document.getElementById('compliance-bars').innerHTML = '<p style="color:var(--text-muted)">No metrics data yet</p>'; return; }
+  const total = c.total;
+  const indicators = [
+    { label: 'Standardized Format', value: c.standardized, color: 'var(--primary)' },
+    { label: 'Interactive Communication', value: c.interactive, color: 'var(--serious)' },
+    { label: 'Verification Completed', value: c.verified, color: 'var(--stable)' },
+    { label: 'Documentation Complete', value: c.documented, color: 'var(--watch)' },
+  ];
+  document.getElementById('compliance-bars').innerHTML = indicators.map(ind => {
+    const pct = Math.round((ind.value||0)/total*100);
+    return `<div class="compliance-bar">
+      <div class="compliance-bar-label">${ind.label}</div>
+      <div class="compliance-bar-track">
+        <div class="compliance-bar-fill" style="width:${pct}%; background:${ind.color};">${pct}%</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStatusChart(counts) {
+  const labels = ['Draft','Sent','Acknowledged','Verified','Archived'];
+  const colors = ['#9ca3af','#2563eb','#ea580c','#16a34a','#6b7280'];
+  const values = labels.map(l => counts[l.toLowerCase()] || 0);
+
+  new Chart(document.getElementById('status-chart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
+      cutout: '60%'
+    }
+  });
+}
+
+function renderSeverityChart(severity) {
+  const labels = ['Critical','Serious','Watch','Stable'];
+  const keys = ['critical','serious','watch','stable'];
+  const colors = ['#dc2626','#ea580c','#ca8a04','#16a34a'];
+  const values = keys.map(k => severity[k] || 0);
+
+  new Chart(document.getElementById('severity-chart'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
+      cutout: '60%'
+    }
+  });
+}
+
+function renderTimelineChart(data) {
+  if (!data || !data.length) return;
+  new Chart(document.getElementById('timeline-chart'), {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.day),
+      datasets: [
+        { label: 'Total', data: data.map(d => d.count), backgroundColor: '#2563eb', borderRadius: 4 },
+        { label: 'Verified', data: data.map(d => d.verified), backgroundColor: '#16a34a', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+        x: { grid: { display: false } }
+      },
+      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+{% endblock %}

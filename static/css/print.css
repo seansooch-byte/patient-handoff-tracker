@@ -1,0 +1,143 @@
+/* Print stylesheet — clean handoff sheet on letter paper */
+
+@media print {
+  /* Hide interactive elements */
+  .nav,
+  .no-print,
+  .sse-dot,
+  .board-filters,
+  .handoff-timeline,
+  .verification-section,
+  button,
+  .mode-toggle,
+  .filter-chip,
+  #flash-container {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-header,
+  .print-only {
+    display: block !important;
+  }
+
+  /* Reset page */
+  body {
+    background: white;
+    color: black;
+    font-size: 10pt;
+    line-height: 1.4;
+    padding: 0;
+    margin: 0;
+  }
+
+  .page {
+    padding: 0;
+  }
+
+  .container {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  /* Cards and sections */
+  .handoff-section,
+  .handoff-patient-bar,
+  .card {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: none;
+    break-inside: avoid;
+    margin-bottom: 8px;
+  }
+
+  .handoff-section-header,
+  .form-section-header {
+    background: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* I-PASS letter badges need color */
+  .form-section-letter {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Acuity badges need color */
+  .badge {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    border: 1px solid currentColor;
+  }
+
+  /* Action items */
+  .action-item-view {
+    padding: 4px 8px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .action-checkbox {
+    border: 1px solid #666;
+    width: 14px;
+    height: 14px;
+  }
+  .action-checkbox.checked {
+    background: #333 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Metadata */
+  .handoff-meta {
+    font-size: 9pt;
+    border-bottom: 1px solid #ccc;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+
+  /* Patient bar */
+  .handoff-patient-bar {
+    padding: 8px 12px;
+  }
+
+  .handoff-patient-name {
+    font-size: 14pt;
+  }
+
+  /* Field labels */
+  .handoff-field-label {
+    font-size: 8pt;
+  }
+
+  .handoff-field-value {
+    font-size: 10pt;
+  }
+
+  /* Grid layout for print */
+  .handoff-section-body > div[style*="grid"] {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Page setup */
+  @page {
+    margin: 0.5in;
+    size: letter portrait;
+  }
+
+  /* Footer with timestamp */
+  @page {
+    @bottom-center {
+      content: "Handoff Tracker — Printed " attr(data-print-date);
+      font-size: 8pt;
+      color: #999;
+    }
+  }
+
+  /* Links — don't show URLs */
+  a {
+    color: black;
+    text-decoration: none;
+  }
+}
