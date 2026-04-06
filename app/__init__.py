@@ -62,6 +62,11 @@ def create_app():
     def handoff_view(handoff_id=None):
         return render_template('handoff_view.html', active_page='board', user=current_user)
 
+    @app.route('/shifts')
+    @login_required
+    def shifts():
+        return render_template('shifts.html', active_page='shifts', user=current_user)
+
     @app.route('/dashboard')
     @login_required
     def dashboard():

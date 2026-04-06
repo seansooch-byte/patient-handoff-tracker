@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Shifts — Handoff Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">Shift Management</h1>
+  <p class="page-subtitle">Create shifts and assign providers</p>
+</div>
+
+<!-- Current shift -->
+<div class="card" style="margin-bottom: var(--sp-4);">
+  <div class="card-header">
+    <h3 style="font-size: var(--fs-base);">Current Shift</h3>
+    <span class="badge badge-sent">Active</span>
+  </div>
+  <div class="card-body">
+    <div style="display:flex; gap: var(--sp-6); flex-wrap: wrap;">
+      <div>
+        <div style="font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase;">Type</div>
+        <div style="font-weight: 600;">Night Shift</div>
+      </div>
+      <div>
+        <div style="font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase;">Time</div>
+        <div>19:00 — 07:00</div>
+      </div>
+      <div>
+        <div style="font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase;">Department</div>
+        <div>Emergency</div>
+      </div>
+    </div>
+    <div style="margin-top: var(--sp-4);">
+      <div style="font-size: var(--fs-xs); color: var(--text-muted); text-transform: uppercase; margin-bottom: var(--sp-2);">Team</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Provider</th><th>Role</th><th>Zone</th></tr>
+          </thead>
+          <tbody id="shift-team">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create new shift -->
+<div class="card">
+  <div class="card-header">
+    <h3 style="font-size: var(--fs-base);">Create New Shift</h3>
+  </div>
+  <div class="card-body">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Shift Type</label>
+        <select class="form-select" id="new-shift-type">
+          <option value="day">Day (07:00–15:00)</option>
+          <option value="evening">Evening (15:00–23:00)</option>
+          <option value="night" selected>Night (19:00–07:00)</option>
+          <option value="swing">Swing (11:00–23:00)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <select class="form-select">
+          <option value="emergency" selected>Emergency</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="alert('Shift creation will be wired to the API in the next build phase.')">Create Shift</button>
+  </div>
+</div>
+
+<script>
+async function loadShiftTeam() {
+  try {
+    const res = await fetch('/api/patients/stats');
+    // Load team from shift assignments — for now show seeded users
+    const team = [
+      { name: 'Dr. Amy Chen', role: 'Supervisor (Attending)', zone: 'All' },
+      { name: 'Dr. Raj Patel', role: 'Primary (Resident)', zone: 'A' },
+      { name: 'Dr. Maya Williams', role: 'Primary (Resident)', zone: 'B' },
+      { name: 'Jamie Torres, RN', role: 'Secondary (Nurse)', zone: 'A' },
+    ];
+    document.getElementById('shift-team').innerHTML = team.map(t =>
+      `<tr><td style="font-weight:500;">${t.name}</td><td>${t.role}</td><td>${t.zone}</td></tr>`
+    ).join('');
+  } catch(e) { console.error(e); }
+}
+document.addEventListener('DOMContentLoaded', loadShiftTeam);
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/api.js"></script>
+{% endblock %}
