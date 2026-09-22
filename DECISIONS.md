@@ -147,3 +147,66 @@ Handoff board updates are one-directional broadcasts. SSE is a native browser AP
 - One-directional only (server → client). Client actions use regular fetch() calls.
 - Max ~6 concurrent SSE connections per domain in older browsers (fine for 5-15 users)
 - Auto-reconnect handles hospital WiFi flakiness gracefully
+
+---
+
+## DEC-007: Edition 2 "Chart Tab" redesign on a new base
+
+**Date:** 2026-09-22
+**Status:** Accepted
+
+### Context
+Part of the App Redesign Program: every app gets a distinct style, starting from a blank page rather than reskinning the old one. Edition 1 is frozen as a static snapshot at handoff-tracker-v1.pages.dev (git tag `edition-1`).
+
+### Decision
+Rewrite the frontend around the paper chart: the board is a chart rack (one folder per patient, its tab in the ESI acuity colour carrying the room), a handoff is the chart opened (a kraft index divider per framework letter, free text on ruled progress-note paper, status as a routing slip of stamps), and print is the same sheet on letter paper. Four stylesheets replace three (chart, board, sheet, print); shared JS moves into common.js; I-PASS and SBAR share one form script and three template partials. Light only, per DEC-003.
+
+Functional fixes folded in: folders open the latest handoff instead of always starting a new one; "Start Handoff" becomes "Next handoff" (first chart in acuity order without a sent handoff); "+ New Patient" opens a dialog wired to POST /api/patients; SBAR "Save draft" works; SBAR handoffs render as S/B/A/R instead of empty I-PASS sections; drafts can be sent from the view; errors show inline instead of alert(); the dead SSE dot (no SSE route exists) and the dead Preview button are gone; Create Shift is visibly disabled with a note instead of an alert promising a future phase.
+
+### Alternatives Considered
+- **Reskin Edition 1 in place**: rejected by the program's rule that a redesign starts from a new base.
+- **Keep per-page inline styles and scripts**: rejected; they duplicated the acuity map and escaping four times.
+
+### Consequences
+- Fonts load from Google Fonts; system fonts are the fallback on hospital networks that block them.
+- The uncommitted July edits (favicon, darker muted text) are superseded by the new icon and palette.
+
+---
+
+## DEC-008: The shift team is the receiver list
+
+**Date:** 2026-09-22
+**Status:** Accepted
+
+### Context
+Verify and acknowledge are restricted to the handoff's receiver_id, but the Edition 1 forms never set receiver_id, so a handoff made in the app could never be read back (403 for everyone). The roster page and the board's team avatars were hardcoded.
+
+### Decision
+Add GET /api/shifts/current (login_required): the latest shift plus its team from shift_assignments, supervisor first. The board strip, the roster table and the receiver select on both handoff forms all read it. Sending requires a named receiver; a draft may leave it blank. The view shows the read-back form only to the named receiver; the server check stays the real gate.
+
+### Alternatives Considered
+- **GET /api/users**: rejected; the receiver should be someone on this shift, not anyone with an account.
+- **Default the receiver to the attending**: rejected; I-PASS read-back only means something if the actual receiver does it.
+
+### Consequences
+- Covered by tests/test_shift_team.py (login required, team shape, no credential fields, receiver-only verify).
+- Shift creation is still not wired; the latest seeded shift is "current".
+
+---
+
+## DEC-009: All stored timestamps are UTC
+
+**Date:** 2026-09-22
+**Status:** Accepted
+
+### Context
+The server writes datetime('now') (UTC) but the seed file held local wall-clock times. Edition 1 read some fields as local and others as UTC, so the same chart showed times hours apart.
+
+### Decision
+Everything stored is UTC. The seed literals were shifted +4 h (the fictional night shift is 19:00 to 07:00 US Eastern, EDT) and say so in a header comment. The browser reads every timestamp as UTC and shows local 24-hour time through one helper (common.js clock()).
+
+### Alternatives Considered
+- **Store local time**: rejected; Render runs in UTC and SQLite's 'localtime' would follow the server, not the ED.
+
+### Consequences
+- A viewer outside US Eastern sees the seeded shift in their own local time, which is correct for UTC storage.

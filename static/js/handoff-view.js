@@ -1,293 +1,255 @@
 /**
- * Handoff View — loads handoff from API, renders read-only view, handles verification.
+ * Handoff view: the chart opened read-only, one divider page per framework letter.
+ * The last page is the receiver's read-back: a form for the named receiver, a waiting note for
+ * everyone else, the signed synthesis once verified. A draft can be routed from here by its sender.
  */
 
-let currentHandoff = null;
+let current = null;
+
+const CODE_STATUS = { full: 'Full Code', dnr: 'DNR', dni: 'DNI', 'dnr-dni': 'DNR/DNI', comfort: 'Comfort Care' };
+const STEPS = [
+  ['draft', 'Draft', 'created_at'],
+  ['sent', 'Sent', 'sent_at'],
+  ['acknowledged', 'Acknowledged', 'acknowledged_at'],
+  ['verified', 'Verified', 'verified_at'],
+];
 
 async function initHandoffView() {
-  // Get handoff ID from URL path: /handoff/3
   const match = window.location.pathname.match(/\/handoff\/(\d+)/);
-  if (!match) return;
+  if (!match) {
+    document.getElementById('handoff-content').innerHTML =
+      '<div class="empty"><h3>No handoff selected</h3><p>Open a chart from the board.</p></div>';
+    return;
+  }
+  await load(match[1]);
+  window.addEventListener('beforeprint', stampPrint);
+}
 
-  const handoffId = match[1];
-
+async function load(id) {
   try {
-    currentHandoff = await api.get('/api/handoffs/' + handoffId);
-    renderHandoff(currentHandoff);
+    current = await api.get('/api/handoffs/' + id);
+    render(current);
   } catch (err) {
     document.getElementById('handoff-content').innerHTML =
-      `<div class="empty-state"><h3>Handoff not found</h3><p>${err.message}</p></div>`;
+      `<div class="empty"><h3>Handoff not found</h3><p>${esc(err.message)}</p></div>`;
   }
 }
 
-function renderHandoff(h) {
-  const container = document.getElementById('handoff-content');
-  if (!container) return;
-
-  const sevMap = { critical: 'critical', serious: 'serious', stable: 'stable', watch: 'watch' };
-  const sevClass = sevMap[h.illness_severity] || 'stable';
-  const dispClass = h.disposition || 'undecided';
-
-  // Status timeline
-  const steps = ['draft', 'sent', 'acknowledged', 'verified'];
-  const currentIdx = steps.indexOf(h.status);
-
-  const timelineHtml = steps.map((step, i) => {
-    const cls = i < currentIdx ? 'done' : i === currentIdx ? 'active' : '';
-    const lineClass = i < currentIdx ? 'done' : '';
-    const label = step.charAt(0).toUpperCase() + step.slice(1);
-    let html = `<div class="timeline-step ${cls}"><span class="timeline-dot"></span><span>${label}</span></div>`;
-    if (i < steps.length - 1) html += `<div class="timeline-line ${lineClass}"></div>`;
-    return html;
-  }).join('');
-
-  // Action items
-  const actionsHtml = (h.action_items || []).map(a => {
-    const checked = a.completed ? 'checked' : '';
-    const textCls = a.completed ? 'completed' : '';
-    const checkHtml = a.completed ? '&#10003;' : '';
-    const completedInfo = a.completed && a.completer_name
-      ? `<span style="margin-left: var(--sp-2);">Completed by ${esc(a.completer_name)} at ${formatTime(a.completed_at)}</span>`
-      : '';
-
-    return `
-      <div class="action-item-view">
-        <div class="action-checkbox ${checked}" data-action-id="${a.id}" onclick="toggleAction(${a.id}, ${a.completed ? 0 : 1})">${checkHtml}</div>
-        <div class="action-item-text ${textCls}">
-          <div style="font-size: var(--fs-sm);">${esc(a.description)}</div>
-          <div style="font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px;">
-            <span class="badge badge-${a.priority}" style="font-size: 9px;">${a.priority.toUpperCase()}</span>
-            ${a.due_by ? `<span style="margin-left: var(--sp-2);">Due: ${formatTime(a.due_by)}</span>` : ''}
-            ${completedInfo}
-          </div>
-        </div>
-      </div>`;
-  }).join('');
-
-  const completedCount = (h.action_items || []).filter(a => a.completed).length;
-  const totalActions = (h.action_items || []).length;
-
-  // Check if current user is the receiver (for verification section)
-  const meRes = await_me();
-
-  container.innerHTML = `
-    <!-- Patient header -->
-    <div class="handoff-patient-bar">
-      <div class="handoff-patient-info">
-        <div>
-          <div class="handoff-patient-name">${esc(h.patient_name)}</div>
-          <div class="handoff-patient-details">
-            <span>${h.age || ''}${h.sex || ''}</span>
-            <span>MRN ${esc(h.mrn)}</span>
-            <span>Room ${esc(h.room_bed || '')}</span>
-            <span class="badge badge-${sevClass}">${h.illness_severity.charAt(0).toUpperCase() + h.illness_severity.slice(1)}</span>
-            ${h.disposition ? `<span class="badge badge-${dispClass}">${h.disposition.charAt(0).toUpperCase() + h.disposition.slice(1)}</span>` : ''}
-          </div>
-        </div>
-      </div>
-      <div style="text-align:right; font-size: var(--fs-xs); color: var(--text-muted);">
-        <div>${esc(h.chief_complaint || '')}</div>
-        <div>${h.arrival_time ? 'Arrived ' + formatTime(h.arrival_time) : ''}</div>
-      </div>
-    </div>
-
-    <!-- Status timeline -->
-    <div class="handoff-timeline no-print">${timelineHtml}</div>
-
-    <!-- Meta -->
-    <div class="handoff-meta" style="font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: var(--sp-4); display:flex; gap: var(--sp-4); flex-wrap: wrap;">
-      <span>From: <strong style="color: var(--text);">${esc(h.sender_name)} (${h.sender_role})</strong></span>
-      ${h.receiver_name ? `<span>To: <strong style="color: var(--text);">${esc(h.receiver_name)} (${h.receiver_role})</strong></span>` : ''}
-      ${h.sent_at ? `<span>Sent: <strong style="color: var(--text);">${formatTime(h.sent_at)}</strong></span>` : ''}
-    </div>
-
-    <!-- I — Illness Severity -->
-    <div class="handoff-section">
-      <div class="handoff-section-header">
-        <div class="form-section-letter letter-I">I</div>
-        <div><div class="form-section-title">Illness Severity</div></div>
-      </div>
-      <div class="handoff-section-body" style="display:flex; gap: var(--sp-6);">
-        <div class="handoff-field">
-          <div class="handoff-field-label">Severity</div>
-          <div><span class="badge badge-${sevClass}" style="font-size: var(--fs-sm);">${h.illness_severity.charAt(0).toUpperCase() + h.illness_severity.slice(1)}</span></div>
-        </div>
-        <div class="handoff-field">
-          <div class="handoff-field-label">Code Status</div>
-          <div class="handoff-field-value">${esc(h.code_status || 'Not specified')}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- P — Patient Summary -->
-    <div class="handoff-section">
-      <div class="handoff-section-header">
-        <div class="form-section-letter letter-P">P</div>
-        <div><div class="form-section-title">Patient Summary</div></div>
-      </div>
-      <div class="handoff-section-body">
-        <div class="handoff-field">
-          <div class="handoff-field-label">One-Liner</div>
-          <div class="handoff-field-value" style="font-weight: 600;">${esc(h.one_liner)}</div>
-        </div>
-        ${h.hpi_summary ? `<div class="handoff-field"><div class="handoff-field-label">HPI</div><div class="handoff-field-value">${esc(h.hpi_summary)}</div></div>` : ''}
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
-          ${fieldBlock('Pertinent PMH', h.pertinent_pmh)}
-          ${fieldBlock('Key Medications', h.key_meds)}
-        </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4);">
-          ${fieldBlock('Key Labs', h.key_labs)}
-          ${fieldBlock('Key Imaging', h.key_imaging)}
-        </div>
-      </div>
-    </div>
-
-    <!-- A — Action List -->
-    <div class="handoff-section">
-      <div class="handoff-section-header">
-        <div class="form-section-letter letter-A">A</div>
-        <div><div class="form-section-title">Action List</div></div>
-        <div style="margin-left: auto; font-size: var(--fs-xs); color: var(--text-muted);">${completedCount} of ${totalActions} complete</div>
-      </div>
-      <div style="padding: 0;">
-        ${actionsHtml || '<div style="padding: var(--sp-4); color: var(--text-muted); font-size: var(--fs-sm);">No action items</div>'}
-      </div>
-    </div>
-
-    <!-- S — Situational Awareness -->
-    <div class="handoff-section">
-      <div class="handoff-section-header">
-        <div class="form-section-letter letter-S1">S</div>
-        <div><div class="form-section-title">Situational Awareness</div></div>
-      </div>
-      <div class="handoff-section-body">
-        ${fieldBlock('Contingency Plan', h.contingency_plan)}
-        ${fieldBlock('What to Watch For', h.what_to_watch)}
-        ${fieldBlock('Anticipated Changes', h.anticipated_changes)}
-      </div>
-    </div>
-
-    <!-- S — Synthesis / Verification -->
-    ${renderVerificationSection(h)}
-  `;
+function stampPrint() {
+  document.getElementById('print-stamp').textContent =
+    'Printed ' + new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short', hour12: false });
 }
 
-function renderVerificationSection(h) {
-  if (h.status === 'verified' && h.receiver_summary) {
-    return `
-      <div class="handoff-section">
-        <div class="handoff-section-header">
-          <div class="form-section-letter letter-S2">S</div>
-          <div><div class="form-section-title">Synthesis by Receiver</div></div>
-          <span class="badge badge-verified" style="margin-left: auto;">Verified</span>
-        </div>
-        <div class="handoff-section-body">
-          ${fieldBlock('Receiver Summary', h.receiver_summary)}
-          ${fieldBlock('Questions Asked', h.questions_asked)}
-          <div style="font-size: var(--fs-xs); color: var(--text-muted);">
-            Verified at ${formatTime(h.verified_at)} by ${esc(h.receiver_name || 'receiver')}
-          </div>
-        </div>
-      </div>`;
-  }
+/* ── pieces ── */
 
-  if (h.status === 'sent' || h.status === 'acknowledged') {
-    return `
-      <div class="verification-section no-print" id="verification-section">
-        <h3>Synthesis by Receiver</h3>
-        <p style="font-size: var(--fs-sm); color: var(--text-secondary); margin-bottom: var(--sp-3);">
-          As the receiving provider, summarize your understanding to complete the read-back verification.
-        </p>
-        <div class="form-group">
-          <label class="form-label" for="receiver-summary">Your Summary</label>
-          <textarea class="form-textarea" id="receiver-summary" rows="3" placeholder="Summarize what you understand about this patient, the plan, and action items..."></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="questions">Questions or Clarifications</label>
-          <textarea class="form-textarea" id="questions" rows="2" placeholder="Any questions for the outgoing provider?"></textarea>
-        </div>
-        <div style="display:flex; justify-content:flex-end; gap: var(--sp-2);">
-          <button class="btn btn-outline" onclick="verifyHandoff('clarification_needed')">Need Clarification</button>
-          <button class="btn btn-primary" onclick="verifyHandoff('verified')">Verify &amp; Accept</button>
-        </div>
-      </div>`;
-  }
+const entry = (label, value, cls = '') => value
+  ? `<div class="entry"><div class="label">${label}</div><div class="written ${cls}">${esc(value)}</div></div>`
+  : '';
+
+const pair = (a, b) => (a || b) ? `<div class="entry-pair">${a}${b}</div>` : '';
+
+const orNothing = (html) => html.trim() || '<div class="written none">Nothing recorded</div>';
+
+function section(id, letter, word, title, body, extra = '', cls = '') {
+  return `
+    <section class="section ${cls}" id="${id}" aria-labelledby="h-${id}">
+      <div class="divider" aria-hidden="true"><span class="letter">${letter}</span><span class="word">${word}</span></div>
+      <div class="sec-page">
+        <header class="sec-head"><h2 id="h-${id}">${title}</h2>${extra}</header>
+        ${body}
+      </div>
+    </section>`;
+}
+
+const who = (name, role) => name ? `<b>${esc(name)}</b> <span class="muted">(${esc(ROLE_LABEL[role] || role || '')})</span>` : '<span class="muted">No receiver named</span>';
+
+function routingHtml(h) {
+  const at = STEPS.findIndex(([s]) => s === h.status);
+  const slip = STEPS.map(([key, label, field], i) => {
+    const cls = i < at ? 'done' : i === at ? `now ${key}` : '';
+    // the draft's own time only matters while it is still a draft
+    const time = i <= at && h[field] && (key !== 'draft' || at === 0) ? clock(h[field]) : '';
+    return `<div class="slip-step ${cls}"><div class="label">${label}</div><div class="t">${time}</div></div>`;
+  }).join('');
+
+  const canSend = h.status === 'draft' && h.sender_id === window.ME;
+  const to = canSend
+    ? `<div class="field no-print"><label for="send-to">To</label>
+         <select class="select" id="send-to"><option value="">Choose the receiving provider</option></select></div>
+       <button class="btn primary no-print" type="button" onclick="sendDraft()">Send</button>`
+    : `<span class="who">To ${who(h.receiver_name, h.receiver_role)}</span>`;
 
   return `
-    <div class="handoff-section" style="border: 2px dashed var(--border); opacity: 0.6;">
-      <div class="handoff-section-header">
-        <div class="form-section-letter letter-S2">S</div>
-        <div><div class="form-section-title">Synthesis by Receiver</div></div>
+    <div class="routing">
+      <div class="routing-line">
+        <span class="stamp">${h.handoff_type === 'sbar' ? 'SBAR' : 'I-PASS'}</span>
+        <span class="who">From ${who(h.sender_name, h.sender_role)}</span>
+        <span class="arrow" aria-hidden="true">&rarr;</span>
+        ${to}
       </div>
-      <div class="handoff-section-body">
-        <div class="handoff-field-value empty">Pending — handoff must be sent first</div>
-      </div>
+      <div class="slip">${slip}</div>
     </div>`;
 }
 
-async function verifyHandoff(verificationStatus) {
-  if (!currentHandoff) return;
+function actionsHtml(items) {
+  if (!items.length) return '<div class="written none">No action items</div>';
+  return items.map(a => `
+    <div class="todo${a.completed ? ' done' : ''}">
+      <button class="box" type="button" role="checkbox" aria-checked="${a.completed ? 'true' : 'false'}"
+              aria-label="${a.completed ? 'Completed' : 'Mark complete'}: ${esc(a.description)}"
+              ${a.completed ? 'disabled' : `onclick="completeAction(${a.id})"`}></button>
+      <div class="text">
+        <p>${esc(a.description)}</p>
+        <div class="meta">
+          <span class="stamp ${esc(a.priority)}">${esc((a.priority || '').toUpperCase())}</span>
+          ${a.due_by ? `<span>Due ${clock(a.due_by)}</span>` : ''}
+          ${a.completed && a.completer_name ? `<span>Done by ${esc(a.completer_name)} at ${clock(a.completed_at)}</span>` : ''}
+        </div>
+      </div>
+    </div>`).join('');
+}
 
-  const summary = document.getElementById('receiver-summary')?.value || '';
-  const questions = document.getElementById('questions')?.value || '';
+function readbackHtml(h, letter, word) {
+  const notes = entry('Receiver summary', h.receiver_summary) + entry('Questions asked', h.questions_asked);
 
-  // Acknowledge first if needed
-  if (currentHandoff.status === 'sent') {
-    try {
-      await api.post('/api/handoffs/' + currentHandoff.id + '/acknowledge');
-    } catch (err) {
-      // May fail if not the receiver — that's fine
-    }
+  if (h.status === 'verified') {
+    return section('sec-rb', letter, word, 'Synthesis by receiver',
+      orNothing(notes) + `<p class="hint sec-foot-note">Verified at ${clock(h.verified_at)} by ${esc(h.receiver_name || 'the receiver')}</p>`,
+      '<span class="stamp verified">Verified</span>');
   }
 
+  if (h.status === 'draft') {
+    return section('sec-rb', letter, word, 'Synthesis by receiver',
+      '<div class="written none">Opens for the receiver once the handoff is sent</div>', '', 'pending');
+  }
+
+  const clarification = h.verification_status === 'clarification_needed'
+    ? `<div class="notice">Clarification requested. The read-back below is still open.</div>${notes}` : '';
+
+  if (h.receiver_id !== window.ME) {
+    return section('sec-rb', letter, word, 'Synthesis by receiver',
+      clarification + `<div class="written none">Awaiting read-back from ${esc(h.receiver_name || 'the receiver')}</div>`, '', 'pending');
+  }
+
+  return section('sec-rb', letter, word, 'Synthesis by receiver', `
+      ${clarification}
+      <div class="readback-form">
+        <p class="hint readback-intro">As the receiving provider, summarize your understanding to complete the read-back.</p>
+        <div class="field">
+          <label for="receiver-summary">Your summary</label>
+          <textarea class="ruled" id="receiver-summary" rows="3" placeholder="Summarize what you understand about this patient, the plan, and action items..."></textarea>
+        </div>
+        <div class="field">
+          <label for="questions">Questions or clarifications</label>
+          <textarea class="ruled" id="questions" rows="2" placeholder="Any questions for the outgoing provider?"></textarea>
+        </div>
+        <div class="readback-acts">
+          <button class="btn" type="button" onclick="verify('clarification_needed')">Need clarification</button>
+          <button class="btn primary" type="button" onclick="verify('verified')">Verify &amp; accept</button>
+        </div>
+      </div>`, '<span class="stamp sent">Your read-back</span>');
+}
+
+/* ── the sheet ── */
+
+function render(h) {
+  const sev = (SEVERITY[h.illness_severity] || SEVERITY.stable).key;
+  const isSbar = h.handoff_type === 'sbar';
+  const items = h.action_items || [];
+  const done = items.filter(a => a.completed).length;
+
+  document.getElementById('print-title').textContent = (isSbar ? 'SBAR' : 'I-PASS') + ' handoff sheet';
+  const acts = document.getElementById('view-acts');
+  acts.querySelectorAll('[data-new]').forEach(n => n.remove());
+  acts.insertAdjacentHTML('afterbegin', `
+    <a class="btn sm" data-new href="/handoff/new?patient=${Number(h.patient_id)}">New I-PASS</a>
+    <a class="btn sm" data-new href="/sbar/new?patient=${Number(h.patient_id)}">New SBAR</a>`);
+
+  const severity = `
+    <div class="severity-line">
+      <div class="entry"><div class="label">Severity</div><span class="stamp solid big ${esc(sev)}">${esc(cap(sev))}</span></div>
+      ${isSbar ? '' : `<div class="entry"><div class="label">Code status</div><div class="written">${esc(CODE_STATUS[h.code_status] || h.code_status || 'Not specified')}</div></div>`}
+    </div>`;
+
+  let pages;
+  let index;
+  if (isSbar) {
+    pages = [
+      section('sec-s', 'S', 'Situation', 'Situation', severity + entry('Situation', h.sbar_situation || h.one_liner, 'lead')),
+      section('sec-b', 'B', 'Background', 'Background', orNothing(entry('Background', h.sbar_background))),
+      section('sec-a', 'A', 'Assessment', 'Assessment', orNothing(entry('Assessment', h.sbar_assessment))),
+      section('sec-r', 'R', 'Recommend', 'Recommendation', orNothing(entry('Recommendation', h.sbar_recommendation))),
+      readbackHtml(h, '&#10003;', 'Read-back'),
+    ];
+    index = [['sec-s', 'S'], ['sec-b', 'B'], ['sec-a', 'A'], ['sec-r', 'R'], ['sec-rb', '&#10003;']];
+  } else {
+    pages = [
+      section('sec-i', 'I', 'Illness', 'Illness severity', severity),
+      section('sec-p', 'P', 'Patient', 'Patient summary',
+        entry('One-liner', h.one_liner, 'lead') + entry('HPI', h.hpi_summary) +
+        pair(entry('Pertinent PMH', h.pertinent_pmh), entry('Key medications', h.key_meds)) +
+        pair(entry('Key labs', h.key_labs), entry('Key imaging', h.key_imaging))),
+      section('sec-a', 'A', 'Actions', 'Action list', actionsHtml(items),
+        `<span class="count">${done} of ${items.length} complete</span>`),
+      section('sec-s1', 'S', 'Awareness', 'Situational awareness', orNothing(
+        entry('Contingency plan', h.contingency_plan) + entry('What to watch for', h.what_to_watch) +
+        entry('Anticipated changes', h.anticipated_changes))),
+      readbackHtml(h, 'S', 'Synthesis'),
+    ];
+    index = [['sec-i', 'I'], ['sec-p', 'P'], ['sec-a', 'A'], ['sec-s1', 'S'], ['sec-rb', 'S']];
+  }
+
+  document.getElementById('handoff-content').innerHTML = `
+    <header class="chart-label">${chartLabelHtml(h, sev)}</header>
+    ${routingHtml(h)}
+    <div class="binder">
+      <div class="pages">${pages.join('')}</div>
+      <nav class="index no-print" aria-label="Jump to section">
+        ${index.map(([id, l]) => `<a href="#${id}">${l}</a>`).join('')}
+      </nav>
+    </div>`;
+
+  wireIndex();
+  stampPrint();
+  if (h.status === 'draft' && h.sender_id === window.ME) {
+    fillReceivers(document.getElementById('send-to'), h.receiver_id);
+  }
+}
+
+/* ── actions ── */
+
+async function sendDraft() {
+  const receiver = parseInt(document.getElementById('send-to').value, 10);
+  if (!receiver) { flash('Choose the receiving provider before sending.'); return; }
   try {
-    await api.post('/api/handoffs/' + currentHandoff.id + '/verify', {
+    await api.post(`/api/handoffs/${current.id}/send`, { receiver_id: receiver });
+    await load(current.id);
+  } catch (err) { flash(err.message); }
+}
+
+async function verify(verificationStatus) {
+  const summary = document.getElementById('receiver-summary')?.value.trim() || '';
+  if (verificationStatus === 'verified' && !summary) {
+    flash('Write your read-back summary before verifying.');
+    document.getElementById('receiver-summary')?.focus();
+    return;
+  }
+  try {
+    if (current.status === 'sent') await api.post(`/api/handoffs/${current.id}/acknowledge`);
+    await api.post(`/api/handoffs/${current.id}/verify`, {
       receiver_summary: summary,
-      questions_asked: questions,
+      questions_asked: document.getElementById('questions')?.value.trim() || '',
       verification_status: verificationStatus,
     });
-    window.location.reload();
-  } catch (err) {
-    alert('Error: ' + err.message);
-  }
+    await load(current.id);
+  } catch (err) { flash(err.message); }
 }
 
-async function toggleAction(actionId, newState) {
-  if (newState === 1) {
-    try {
-      await api.put('/api/actions/' + actionId + '/complete');
-      window.location.reload();
-    } catch (err) {
-      alert('Error: ' + err.message);
-    }
-  }
+async function completeAction(actionId) {
+  try {
+    await api.put(`/api/actions/${actionId}/complete`);
+    await load(current.id);
+  } catch (err) { flash(err.message); }
 }
 
-function fieldBlock(label, value) {
-  if (!value) return '';
-  return `
-    <div class="handoff-field">
-      <div class="handoff-field-label">${label}</div>
-      <div class="handoff-field-value">${esc(value)}</div>
-    </div>`;
-}
-
-function formatTime(dateStr) {
-  if (!dateStr) return '';
-  const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'Z'));
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-function await_me() {
-  // Sync check — we'll use the user data from the template
-  return null;
-}
-
-function esc(str) {
-  if (!str) return '';
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-document.addEventListener('DOMContentLoaded', initHandoffView);
+initHandoffView();

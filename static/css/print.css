@@ -1,143 +1,43 @@
-/* Print stylesheet — clean handoff sheet on letter paper */
+/* Print: the same chart on letter paper. Screen-only chrome drops away; the dividers and acuity stamps
+   keep their ink so the sheet reads the same on the clipboard as on the iPad. */
+@page { size: letter portrait; margin: .5in; }
 
 @media print {
-  /* Hide interactive elements */
-  .nav,
-  .no-print,
-  .sse-dot,
-  .board-filters,
-  .handoff-timeline,
-  .verification-section,
-  button,
-  .mode-toggle,
-  .filter-chip,
-  #flash-container {
-    display: none !important;
-  }
+  .rack, .colophon, .no-print, .index, .sheet-foot, .readback-form, button:not(.box) { display: none !important; }
+  .print-only, .print-head { display: block !important; }
 
-  /* Show print-only elements */
-  .print-header,
-  .print-only {
-    display: block !important;
-  }
+  body { background: #fff; font-size: 10pt; line-height: 1.35; display: block; min-height: 0; }
+  .page { padding: 0; }
+  .container, .sheet-wrap { max-width: none; padding: 0; }
+  .binder { display: block; }
+  a { color: inherit; text-decoration: none; }
 
-  /* Reset page */
-  body {
-    background: white;
-    color: black;
-    font-size: 10pt;
-    line-height: 1.4;
-    padding: 0;
-    margin: 0;
-  }
+  .print-head { display: flex !important; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #000; padding-bottom: 4pt; margin-bottom: 8pt; font: 600 9pt/1.2 var(--cond); letter-spacing: .08em; text-transform: uppercase; }
 
-  .page {
-    padding: 0;
+  .chart-label, .routing, .section { box-shadow: none; break-inside: avoid; margin-bottom: 7pt; }
+  .chart-label { padding: 7pt 10pt; border-width: 1.5pt; }
+  .chart-label .pt-name { font-size: 15pt; }
+  .routing { padding: 6pt 10pt; }
+  .slip { margin-top: 5pt; }
+  .slip-step { min-height: 0; padding: 4pt 6pt; }
+  .pages { gap: 7pt; }
+  .section { grid-template-columns: 34pt minmax(0, 1fr); border-color: #999; }
+  .divider, .stamp.solid, .slip-step.now, .todo .box::before {
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
-
-  .container {
-    max-width: 100%;
-    padding: 0;
-  }
-
-  /* Cards and sections */
-  .handoff-section,
-  .handoff-patient-bar,
-  .card {
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-shadow: none;
-    break-inside: avoid;
-    margin-bottom: 8px;
-  }
-
-  .handoff-section-header,
-  .form-section-header {
-    background: #f0f0f0 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* I-PASS letter badges need color */
-  .form-section-letter {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* Acuity badges need color */
-  .badge {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-    border: 1px solid currentColor;
-  }
-
-  /* Action items */
-  .action-item-view {
-    padding: 4px 8px;
-    border-bottom: 1px solid #eee;
-  }
-
-  .action-checkbox {
-    border: 1px solid #666;
-    width: 14px;
-    height: 14px;
-  }
-  .action-checkbox.checked {
-    background: #333 !important;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  /* Metadata */
-  .handoff-meta {
-    font-size: 9pt;
-    border-bottom: 1px solid #ccc;
-    padding-bottom: 6px;
-    margin-bottom: 8px;
-  }
-
-  /* Patient bar */
-  .handoff-patient-bar {
-    padding: 8px 12px;
-  }
-
-  .handoff-patient-name {
-    font-size: 14pt;
-  }
-
-  /* Field labels */
-  .handoff-field-label {
-    font-size: 8pt;
-  }
-
-  .handoff-field-value {
-    font-size: 10pt;
-  }
-
-  /* Grid layout for print */
-  .handoff-section-body > div[style*="grid"] {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-  }
-
-  /* Page setup */
-  @page {
-    margin: 0.5in;
-    size: letter portrait;
-  }
-
-  /* Footer with timestamp */
-  @page {
-    @bottom-center {
-      content: "Handoff Tracker — Printed " attr(data-print-date);
-      font-size: 8pt;
-      color: #999;
-    }
-  }
-
-  /* Links — don't show URLs */
-  a {
-    color: black;
-    text-decoration: none;
-  }
+  .divider { padding-top: 6pt; }
+  .divider .letter { font-size: 20pt; }
+  .divider .word { display: none; }
+  .sec-page { padding: 7pt 10pt 9pt; }
+  .sec-head { margin-bottom: 6pt; padding-bottom: 4pt; }
+  .sec-head h2 { font-size: 12pt; }
+  .written { background: none; line-height: 1.4; font-size: 10pt; }
+  .written.lead { font-size: 10.5pt; }
+  .entry { margin-bottom: 6pt; }
+  .entry-pair { grid-template-columns: 1fr 1fr !important; }
+  .todo { padding: 2pt 0; grid-template-columns: 20pt minmax(0, 1fr); }
+  .todo .box { width: 20pt; height: 20pt; }
+  .todo .box::before { width: 11pt; height: 11pt; border-width: 1pt; }
+  .todo .text { padding-top: 3pt; }
+  .todo .text p { font-size: 10pt; }
 }

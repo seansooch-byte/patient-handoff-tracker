@@ -4,29 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}Handoff Tracker{% endblock %}</title>
-  <link rel="stylesheet" href="/static/css/base.css">
-  <link rel="stylesheet" href="/static/css/components.css">
+  {% include "partials/head.html" %}
   {% block styles %}{% endblock %}
 </head>
 <body>
-  <nav class="nav no-print">
-    <div class="nav-inner">
-      <div class="nav-brand">
-        <div class="icon">H</div>
-        <span>Handoff</span>
-      </div>
-      <ul class="nav-links">
-        <li><a href="/board" class="{% if active_page == 'board' %}active{% endif %}">Board</a></li>
-        <li><a href="/shifts" class="{% if active_page == 'shifts' %}active{% endif %}">Shifts</a></li>
-        <li><a href="/dashboard" class="{% if active_page == 'dashboard' %}active{% endif %}">Metrics</a></li>
-      </ul>
-      <div class="nav-user">
-        <span class="sse-dot disconnected" id="sse-status" title="Real-time connection"></span>
-        <span id="user-name">{{ user.display_name if user else 'Guest' }}</span>
-        <button class="btn btn-ghost btn-sm" id="logout-btn" onclick="doLogout()">Logout</button>
+  <header class="rack no-print">
+    <div class="rack-in">
+      <a class="brand" href="/board">
+        <span class="brand-tab" aria-hidden="true">H</span>
+        <span class="brand-name">Handoff<small>ED Main</small></span>
+      </a>
+      <nav class="tabs" aria-label="Sections">
+        {% for key, href, label in [('board', '/board', 'Board'), ('shifts', '/shifts', 'Shifts'), ('dashboard', '/dashboard', 'Metrics')] %}
+        <a href="{{ href }}" class="tab{% if active_page == key %} on{% endif %}"{% if active_page == key %} aria-current="page"{% endif %}>{{ label }}</a>
+        {% endfor %}
+      </nav>
+      <div class="who">
+        <span class="who-name">{{ user.display_name if user else 'Guest' }}</span>
+        <button class="btn ghost sm" type="button" onclick="doLogout()">Sign out</button>
       </div>
     </div>
-  </nav>
+  </header>
 
   <main class="page">
     <div class="container">
@@ -35,12 +33,22 @@
     </div>
   </main>
 
+  <footer class="colophon no-print">
+    <span>I-PASS handoff system</span>
+    <span>QI project</span>
+    <span>All patient data is synthetic</span>
+    <a href="https://handoff-tracker-v1.pages.dev">Edition 1</a>
+  </footer>
+
   <script>
+    window.ME = {{ user.id if user and user.is_authenticated else 'null' }};
     async function doLogout() {
       await fetch('/auth/logout', { method: 'POST' });
       window.location.href = '/login';
     }
   </script>
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/common.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

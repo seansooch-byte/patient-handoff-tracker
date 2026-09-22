@@ -1,151 +1,56 @@
 {% extends "base.html" %}
-{% block title %}QI Dashboard — Handoff Tracker{% endblock %}
-{% block styles %}
-<style>
-  .dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: var(--sp-4);
-    margin-bottom: var(--sp-4);
-  }
-  .stat-card {
-    background: var(--card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: var(--sp-4);
-    box-shadow: var(--shadow-sm);
-  }
-  .stat-value {
-    font-size: var(--fs-2xl);
-    font-weight: 700;
-    color: var(--text);
-  }
-  .stat-label {
-    font-size: var(--fs-xs);
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    margin-top: var(--sp-1);
-  }
-  .stat-sub {
-    font-size: var(--fs-xs);
-    color: var(--text-secondary);
-    margin-top: var(--sp-2);
-  }
-  .chart-card {
-    background: var(--card);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-lg);
-    padding: var(--sp-4);
-    box-shadow: var(--shadow-sm);
-    margin-bottom: var(--sp-4);
-  }
-  .chart-title {
-    font-size: var(--fs-base);
-    font-weight: 600;
-    margin-bottom: var(--sp-3);
-  }
-  .chart-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--sp-4);
-    margin-bottom: var(--sp-4);
-  }
-  @media (max-width: 768px) { .chart-row { grid-template-columns: 1fr; } }
-  .compliance-bar {
-    display: flex;
-    align-items: center;
-    gap: var(--sp-3);
-    margin-bottom: var(--sp-3);
-  }
-  .compliance-bar-label {
-    font-size: var(--fs-sm);
-    width: 180px;
-    flex-shrink: 0;
-  }
-  .compliance-bar-track {
-    flex: 1;
-    height: 24px;
-    background: var(--surface);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .compliance-bar-fill {
-    height: 100%;
-    border-radius: var(--radius);
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: var(--sp-2);
-    font-size: var(--fs-xs);
-    font-weight: 600;
-    color: white;
-    min-width: 40px;
-    transition: width 0.6s ease;
-  }
-  .export-btn { margin-left: auto; }
-</style>
-{% endblock %}
+{% block title %}QI Dashboard · Handoff Tracker{% endblock %}
 
 {% block content %}
-<div class="page-header" style="display:flex; align-items:center; justify-content:space-between;">
+<div class="page-head">
   <div>
-    <h1 class="page-title">QI Dashboard</h1>
-    <p class="page-subtitle">Handoff quality metrics for Joint Commission compliance</p>
+    <h1 class="title">QI dashboard</h1>
+    <p class="subtitle">Handoff quality metrics for Joint Commission compliance</p>
   </div>
-  <a href="/api/metrics/export" class="btn btn-outline export-btn">Export CSV</a>
+  <a href="/api/metrics/export" class="btn">Export CSV</a>
 </div>
 
-<!-- Summary stats -->
-<div class="dashboard-grid" id="stats-grid">
-  <div class="stat-card">
-    <div class="stat-value" id="stat-total">-</div>
-    <div class="stat-label">Total Handoffs</div>
-    <div class="stat-sub" id="stat-type-breakdown"></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value" id="stat-verified">-</div>
-    <div class="stat-label">Verified (Read-back)</div>
-    <div class="stat-sub" id="stat-verify-rate"></div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value" id="stat-duration">-</div>
-    <div class="stat-label">Avg Duration</div>
-    <div class="stat-sub">Time from creation to verification</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-value" id="stat-actions">-</div>
-    <div class="stat-label">Action Item Completion</div>
-    <div class="stat-sub" id="stat-actions-detail"></div>
-  </div>
+<div class="tiles">
+  <div class="tile"><div class="label">Total handoffs</div><div class="v" id="stat-total">-</div><div class="s" id="stat-type-breakdown"></div></div>
+  <div class="tile"><div class="label">Verified (read-back)</div><div class="v" id="stat-verified">-</div><div class="s" id="stat-verify-rate"></div></div>
+  <div class="tile"><div class="label">Avg duration</div><div class="v" id="stat-duration">-</div><div class="s">Time from creation to verification</div></div>
+  <div class="tile"><div class="label">Action item completion</div><div class="v" id="stat-actions">-</div><div class="s" id="stat-actions-detail"></div></div>
 </div>
 
-<!-- Compliance bars -->
-<div class="chart-card">
-  <div class="chart-title">Joint Commission Compliance Indicators</div>
-  <div id="compliance-bars"></div>
+<section class="paper" aria-labelledby="jc-h">
+  <div class="paper-head"><h2 id="jc-h">Joint Commission compliance indicators</h2></div>
+  <div class="paper-body"><div class="bars" id="compliance-bars"></div></div>
+</section>
+
+<div class="chart-pair">
+  <section class="paper" aria-labelledby="st-h">
+    <div class="paper-head"><h2 id="st-h">Handoff status distribution</h2></div>
+    <div class="paper-body"><div class="canvas-box"><canvas id="status-chart" aria-label="Handoff status distribution" role="img"></canvas></div></div>
+  </section>
+  <section class="paper" aria-labelledby="sv-h">
+    <div class="paper-head"><h2 id="sv-h">Severity distribution</h2></div>
+    <div class="paper-body"><div class="canvas-box"><canvas id="severity-chart" aria-label="Severity distribution" role="img"></canvas></div></div>
+  </section>
 </div>
 
-<!-- Charts row -->
-<div class="chart-row">
-  <div class="chart-card">
-    <div class="chart-title">Handoff Status Distribution</div>
-    <canvas id="status-chart" height="250"></canvas>
-  </div>
-  <div class="chart-card">
-    <div class="chart-title">Severity Distribution</div>
-    <canvas id="severity-chart" height="250"></canvas>
-  </div>
-</div>
+<section class="paper" aria-labelledby="tl-h">
+  <div class="paper-head"><h2 id="tl-h">Handoffs over time</h2></div>
+  <div class="paper-body"><div class="canvas-box wide"><canvas id="timeline-chart" aria-label="Handoffs over time" role="img"></canvas></div></div>
+</section>
+{% endblock %}
 
-<div class="chart-card">
-  <div class="chart-title">Handoffs Over Time</div>
-  <canvas id="timeline-chart" height="200"></canvas>
-</div>
-
+{% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script>
+// Chart colours come from the stylesheet so the charts wear the same ink as the page
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
 async function loadDashboard() {
+  Chart.defaults.font.family = css('--sans');
+  Chart.defaults.color = css('--ink-2');
+  Chart.defaults.plugins.legend.labels.usePointStyle = true;
+  Chart.defaults.plugins.legend.labels.padding = 16;
+  Chart.defaults.maintainAspectRatio = false;
   try {
     const data = await api.get('/api/metrics/summary');
     renderStats(data);
@@ -154,23 +59,22 @@ async function loadDashboard() {
     renderSeverityChart(data.severity);
     renderTimelineChart(data.over_time);
   } catch (err) {
-    console.error('Dashboard error:', err);
+    flash('Could not load metrics: ' + err.message);
   }
 }
 
 function renderStats(data) {
   const sc = data.status_counts;
-  const total = Object.values(sc).reduce((a,b) => a+b, 0);
+  const total = Object.values(sc).reduce((a, b) => a + b, 0);
   const verified = sc.verified || 0;
   const c = data.compliance || {};
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-type-breakdown').textContent =
-    `${data.type_counts.ipass||0} I-PASS / ${data.type_counts.sbar||0} SBAR`;
-
+    `${data.type_counts.ipass || 0} I-PASS / ${data.type_counts.sbar || 0} SBAR`;
   document.getElementById('stat-verified').textContent = verified;
   document.getElementById('stat-verify-rate').textContent =
-    total > 0 ? `${Math.round(verified/total*100)}% verification rate` : 'No data';
+    total > 0 ? `${Math.round(verified / total * 100)}% verification rate` : 'No data';
 
   const avgDur = c.avg_duration;
   if (avgDur && avgDur > 0) {
@@ -183,10 +87,8 @@ function renderStats(data) {
   const totalActions = c.total_actions || 0;
   const completedActions = c.completed_actions || 0;
   if (totalActions > 0) {
-    document.getElementById('stat-actions').textContent =
-      Math.round(completedActions/totalActions*100) + '%';
-    document.getElementById('stat-actions-detail').textContent =
-      `${completedActions} of ${totalActions} items completed`;
+    document.getElementById('stat-actions').textContent = Math.round(completedActions / totalActions * 100) + '%';
+    document.getElementById('stat-actions-detail').textContent = `${completedActions} of ${totalActions} items completed`;
   } else {
     document.getElementById('stat-actions').textContent = 'N/A';
     document.getElementById('stat-actions-detail').textContent = 'No action items yet';
@@ -194,56 +96,42 @@ function renderStats(data) {
 }
 
 function renderCompliance(c) {
-  if (!c || !c.total) { document.getElementById('compliance-bars').innerHTML = '<p style="color:var(--text-muted)">No metrics data yet</p>'; return; }
-  const total = c.total;
+  const host = document.getElementById('compliance-bars');
+  if (!c || !c.total) { host.innerHTML = '<p class="muted">No metrics data yet</p>'; return; }
   const indicators = [
-    { label: 'Standardized Format', value: c.standardized, color: 'var(--primary)' },
-    { label: 'Interactive Communication', value: c.interactive, color: 'var(--serious)' },
-    { label: 'Verification Completed', value: c.verified, color: 'var(--stable)' },
-    { label: 'Documentation Complete', value: c.documented, color: 'var(--watch)' },
+    ['Standardized format', c.standardized],
+    ['Interactive communication', c.interactive],
+    ['Verification completed', c.verified],
+    ['Documentation complete', c.documented],
   ];
-  document.getElementById('compliance-bars').innerHTML = indicators.map(ind => {
-    const pct = Math.round((ind.value||0)/total*100);
-    return `<div class="compliance-bar">
-      <div class="compliance-bar-label">${ind.label}</div>
-      <div class="compliance-bar-track">
-        <div class="compliance-bar-fill" style="width:${pct}%; background:${ind.color};">${pct}%</div>
-      </div>
+  host.innerHTML = indicators.map(([label, value]) => {
+    const pct = Math.round((value || 0) / c.total * 100);
+    return `<div class="bar-row">
+      <div class="name">${label}</div>
+      <div class="bar-track" role="progressbar" aria-label="${label}" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><div class="bar-fill" data-pct="${pct}"></div></div>
+      <div class="pct">${pct}%</div>
     </div>`;
   }).join('');
+  host.querySelectorAll('.bar-fill').forEach(el => { el.style.width = el.dataset.pct + '%'; });
+}
+
+function doughnut(id, labels, values, colors) {
+  new Chart(document.getElementById(id), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderColor: css('--paper'), borderWidth: 2 }] },
+    options: { plugins: { legend: { position: 'bottom' } }, cutout: '60%' },
+  });
 }
 
 function renderStatusChart(counts) {
-  const labels = ['Draft','Sent','Acknowledged','Verified','Archived'];
-  const colors = ['#9ca3af','#2563eb','#ea580c','#16a34a','#6b7280'];
-  const values = labels.map(l => counts[l.toLowerCase()] || 0);
-
-  new Chart(document.getElementById('status-chart'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
-      cutout: '60%'
-    }
-  });
+  const labels = ['Draft', 'Sent', 'Acknowledged', 'Verified', 'Archived'];
+  doughnut('status-chart', labels, labels.map(l => counts[l.toLowerCase()] || 0),
+    [css('--kraft-edge'), css('--blue'), css('--watch'), css('--stable'), css('--ink-3')]);
 }
 
 function renderSeverityChart(severity) {
-  const labels = ['Critical','Serious','Watch','Stable'];
-  const keys = ['critical','serious','watch','stable'];
-  const colors = ['#dc2626','#ea580c','#ca8a04','#16a34a'];
-  const values = keys.map(k => severity[k] || 0);
-
-  new Chart(document.getElementById('severity-chart'), {
-    type: 'doughnut',
-    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } },
-      cutout: '60%'
-    }
-  });
+  const keys = ['critical', 'serious', 'watch', 'stable'];
+  doughnut('severity-chart', keys.map(cap), keys.map(k => severity[k] || 0), keys.map(k => css('--' + k)));
 }
 
 function renderTimelineChart(data) {
@@ -253,25 +141,20 @@ function renderTimelineChart(data) {
     data: {
       labels: data.map(d => d.day),
       datasets: [
-        { label: 'Total', data: data.map(d => d.count), backgroundColor: '#2563eb', borderRadius: 4 },
-        { label: 'Verified', data: data.map(d => d.verified), backgroundColor: '#16a34a', borderRadius: 4 }
-      ]
+        { label: 'Total', data: data.map(d => d.count), backgroundColor: css('--blue'), borderRadius: 2 },
+        { label: 'Verified', data: data.map(d => d.verified), backgroundColor: css('--stable'), borderRadius: 2 },
+      ],
     },
     options: {
-      responsive: true,
       scales: {
-        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-        x: { grid: { display: false } }
+        y: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: css('--rule-2') } },
+        x: { grid: { display: false } },
       },
-      plugins: { legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } } }
-    }
+      plugins: { legend: { position: 'bottom' } },
+    },
   });
 }
 
-document.addEventListener('DOMContentLoaded', loadDashboard);
+loadDashboard();
 </script>
-{% endblock %}
-
-{% block scripts %}
-<script src="/static/js/api.js"></script>
 {% endblock %}

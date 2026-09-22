@@ -64,9 +64,11 @@ def create_app():
     from .routes import patients as patients_bp
     from .routes import handoffs as handoffs_bp
     from .routes import metrics as metrics_bp
+    from .routes import shifts as shifts_bp
     app.register_blueprint(patients_bp.bp)
     app.register_blueprint(handoffs_bp.bp)
     app.register_blueprint(metrics_bp.bp)
+    app.register_blueprint(shifts_bp.bp)
 
     # --- Page routes (serve templates) ---
 

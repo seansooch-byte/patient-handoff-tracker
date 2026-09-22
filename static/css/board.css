@@ -1,231 +1,71 @@
-/* Patient board — the main view after login */
+/* The board is the chart rack: one folder per patient, its tab in the ESI acuity colour carrying the room. */
 
-.board-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--sp-4);
-  flex-wrap: wrap;
-  gap: var(--sp-3);
+/* Shift strip: the whiteboard line above the rack */
+.shift-strip {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
+  padding: 10px 14px; margin-bottom: 20px; border: 1.5px solid var(--ink); border-radius: var(--r);
+  background: var(--paper); font-size: 14px;
 }
-
-.board-stats {
-  display: flex;
-  gap: var(--sp-4);
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
+.shift-strip .shift-name { font: 700 15px/1 var(--cond); letter-spacing: .06em; text-transform: uppercase; }
+.shift-strip .shift-time { font-family: var(--mono); color: var(--ink-2); }
+.shift-strip .sep { width: 1px; align-self: stretch; background: var(--rule); }
+.team { display: flex; gap: 6px; }
+.initials {
+  width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%;
+  border: 1.5px solid var(--ink); background: var(--kraft-2); font: 600 12px/1 var(--mono); color: var(--ink);
 }
+.initials.lead { background: var(--ink); color: var(--paper); }
+.shift-strip .roster-link { margin-left: auto; }
+@media (max-width: 640px) { .shift-strip .sep { display: none; } .shift-strip .roster-link { margin-left: 0; } }
 
-.board-stats strong {
-  color: var(--text);
+/* Head: title, census numbers, actions */
+.board-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 14px 20px; margin-bottom: 16px; }
+.census { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 6px; color: var(--ink-2); font-size: 14.5px; }
+.census b { font: 600 17px/1 var(--mono); color: var(--ink); margin-right: 4px; }
+.census .hot b { color: var(--critical); }
+.head-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Filters: two labelled groups, one active filter */
+.filters { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-bottom: 24px; }
+.filter-group { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.filter-group .label { margin-right: 4px; }
+.chip {
+  min-height: 36px; padding: 0 13px; border-radius: 18px; cursor: pointer;
+  border: 1.5px solid var(--rule); background: var(--paper); color: var(--ink-2); font-weight: 500; font-size: 14px;
 }
+.chip:hover { border-color: var(--ink-3); color: var(--ink); }
+.chip.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.chip .n { font: 500 12px/1 var(--mono); margin-left: 5px; opacity: .75; }
 
-.board-filters {
-  display: flex;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-4);
+/* The rack */
+.rack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 26px 18px; }
+@media (max-width: 400px) { .rack-grid { grid-template-columns: 1fr; } }
+
+.folder { --acu: var(--stable); display: flex; flex-direction: column; text-decoration: none; color: inherit; }
+.folder.critical { --acu: var(--critical); }
+.folder.serious { --acu: var(--serious); }
+.folder.watch { --acu: var(--watch); }
+.folder-tab {
+  align-self: flex-start; display: inline-flex; align-items: baseline; gap: 10px;
+  padding: 7px 14px 5px; background: var(--acu); color: #fff; border-radius: 8px 8px 0 0;
+  font: 600 12px/1 var(--cond); letter-spacing: .1em; text-transform: uppercase;
 }
-
-.filter-chip {
-  padding: var(--sp-1) var(--sp-3);
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  font-size: var(--fs-xs);
-  font-weight: 500;
-  color: var(--text-secondary);
-  background: var(--card);
-  cursor: pointer;
-  transition: all 0.15s;
+.folder-tab .room { font: 600 16px/1 var(--mono); letter-spacing: .02em; }
+.folder-body {
+  flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 14px 16px 14px;
+  background: var(--paper); border: 1px solid var(--rule); border-top: 4px solid var(--acu);
+  border-radius: 0 var(--r) var(--r) var(--r); box-shadow: var(--shadow);
+  transition: box-shadow .15s, transform .15s;
 }
+.folder:hover .folder-body, .folder:focus-visible .folder-body { box-shadow: 0 1px 0 rgba(60, 45, 15, .08), 0 14px 26px -14px rgba(60, 45, 15, .5); transform: translateY(-2px); }
+.folder:focus-visible { outline: none; }
+.folder:focus-visible .folder-body { outline: 2px solid var(--blue); outline-offset: 2px; }
+.pt-name { font: 700 19px/1.2 var(--cond); letter-spacing: .01em; }
+.pt-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; font: 400 12.5px/1.4 var(--mono); color: var(--ink-3); }
+.pt-cc { font-size: 14.5px; line-height: 1.45; color: var(--ink); flex: 1; }
+.folder-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 10px; border-top: 1px dashed var(--rule); }
+.folder-foot .next { margin-left: auto; font-size: 13px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 6px; }
+.folder-foot .next .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--serious); }
+.folder-foot .next .dot.done { background: var(--stable); }
 
-.filter-chip:hover,
-.filter-chip.active {
-  background: var(--primary-bg);
-  border-color: var(--primary);
-  color: var(--primary);
-}
-
-/* Patient card grid */
-.patient-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: var(--sp-3);
-}
-
-@media (max-width: 480px) {
-  .patient-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Patient card */
-.patient-card {
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--sp-4);
-  cursor: pointer;
-  transition: box-shadow 0.15s, border-color 0.15s;
-  position: relative;
-}
-
-.patient-card:hover {
-  box-shadow: var(--shadow);
-  border-color: var(--border);
-}
-
-/* Acuity left stripe */
-.patient-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-}
-
-.patient-card.acuity-1::before { background: var(--critical); }
-.patient-card.acuity-2::before { background: var(--serious); }
-.patient-card.acuity-3::before { background: var(--watch); }
-.patient-card.acuity-4::before { background: var(--stable); }
-.patient-card.acuity-5::before { background: var(--stable); }
-
-.patient-card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: var(--sp-2);
-}
-
-.patient-name {
-  font-weight: 600;
-  font-size: var(--fs-base);
-  color: var(--text);
-}
-
-.patient-room {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface);
-  padding: 2px var(--sp-2);
-  border-radius: var(--radius-sm);
-  font-family: var(--font-mono);
-}
-
-.patient-meta {
-  display: flex;
-  gap: var(--sp-3);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  margin-bottom: var(--sp-3);
-}
-
-.patient-complaint {
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  margin-bottom: var(--sp-3);
-  line-height: 1.4;
-}
-
-.patient-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
-}
-
-.patient-actions-count {
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-}
-
-.patient-actions-count .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--warning);
-}
-
-.patient-actions-count .dot.done {
-  background: var(--stable);
-}
-
-/* Handoff status indicator on card */
-.handoff-indicator {
-  font-size: var(--fs-xs);
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1);
-}
-
-.handoff-indicator .status-icon {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-}
-
-.handoff-indicator.draft .status-icon    { background: var(--surface); color: var(--text-muted); }
-.handoff-indicator.sent .status-icon     { background: var(--primary-bg); color: var(--primary); }
-.handoff-indicator.verified .status-icon { background: var(--stable-bg); color: var(--stable); }
-
-/* Shift bar */
-.shift-bar {
-  background: var(--card);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius);
-  padding: var(--sp-3) var(--sp-4);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--sp-4);
-  font-size: var(--fs-sm);
-}
-
-.shift-info {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-}
-
-.shift-type {
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.shift-time {
-  color: var(--text-muted);
-}
-
-.shift-team {
-  display: flex;
-  gap: var(--sp-1);
-}
-
-.team-avatar {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--primary-bg);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  border: 2px solid var(--card);
-}
-
-.team-avatar:not(:first-child) {
-  margin-left: -8px;
-}
+@media (prefers-reduced-motion: reduce) { .folder-body { transition: none; } .folder:hover .folder-body { transform: none; } }

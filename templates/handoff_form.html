@@ -1,192 +1,138 @@
 {% extends "base.html" %}
-{% block title %}New Handoff — Handoff Tracker{% endblock %}
+{% block title %}New Handoff · Handoff Tracker{% endblock %}
 {% block styles %}
-<link rel="stylesheet" href="/static/css/handoff.css">
+<link rel="stylesheet" href="/static/css/sheet.css">
 {% endblock %}
 
 {% block content %}
-<div class="handoff-form">
-
-  <!-- Back + mode toggle -->
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--sp-4);">
-    <a href="/board" style="display:flex; align-items:center; gap: var(--sp-2); color: var(--text-secondary); font-size: var(--fs-sm);">
-      &larr; Back to Board
-    </a>
-    <div class="mode-toggle">
-      <button class="active" id="mode-ipass">I-PASS</button>
-      <button id="mode-sbar" onclick="location.href='/sbar/new?patient='+currentPatientId">SBAR</button>
-    </div>
+<div class="sheet-wrap">
+  <div class="sheet-top">
+    <a class="back" href="/board">&larr; Board</a>
+    <nav class="mode" aria-label="Handoff framework">
+      <span aria-current="page">I-PASS</span>
+      <a href="/sbar/new" data-framework>SBAR</a>
+    </nav>
   </div>
 
-  <!-- Patient bar (populated by JS from API) -->
-  <div class="handoff-patient-bar" id="patient-bar">
-    <div class="handoff-patient-info">
-      <div class="handoff-patient-name" style="color: var(--text-muted);">Loading patient...</div>
-    </div>
-  </div>
+  <header class="chart-label loading" id="patient-bar">
+    <div class="pt"><div class="pt-name">Loading patient...</div></div>
+  </header>
 
-  <form id="handoff-form">
+  <form id="handoff-form" data-type="ipass" novalidate>
+    {% include "partials/routing.html" %}
 
-    <!-- I — Illness Severity -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <div class="form-section-letter letter-I">I</div>
-        <div>
-          <div class="form-section-title">Illness Severity</div>
-          <div class="form-section-subtitle">Current clinical status and acuity</div>
-        </div>
-      </div>
-      <div class="form-section-body">
-        <div class="form-group">
-          <div class="severity-options">
-            <div class="severity-option critical">
-              <input type="radio" name="severity" id="sev-critical" value="critical" checked>
-              <label for="sev-critical">Critical</label>
-            </div>
-            <div class="severity-option serious">
-              <input type="radio" name="severity" id="sev-serious" value="serious">
-              <label for="sev-serious">Serious</label>
-            </div>
-            <div class="severity-option watch">
-              <input type="radio" name="severity" id="sev-watch" value="watch">
-              <label for="sev-watch">Watch</label>
-            </div>
-            <div class="severity-option stable">
-              <input type="radio" name="severity" id="sev-stable" value="stable">
-              <label for="sev-stable">Stable</label>
+    <div class="binder">
+      <div class="pages">
+
+        <section class="section" id="sec-i" aria-labelledby="h-i">
+          <div class="divider" aria-hidden="true"><span class="letter">I</span><span class="word">Illness</span></div>
+          <div class="sec-page">
+            <header class="sec-head"><h2 id="h-i">Illness severity</h2><p>Current clinical status and acuity</p></header>
+            {% include "partials/severity.html" %}
+            <div class="field">
+              <label for="code-status">Code status</label>
+              <select class="select" id="code-status" name="code_status">
+                <option value="full">Full Code</option>
+                <option value="dnr">DNR</option>
+                <option value="dni">DNI</option>
+                <option value="dnr-dni">DNR/DNI</option>
+                <option value="comfort">Comfort Care</option>
+              </select>
             </div>
           </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="code-status">Code Status</label>
-          <select class="form-select" id="code-status" name="code_status">
-            <option value="full">Full Code</option>
-            <option value="dnr">DNR</option>
-            <option value="dni">DNI</option>
-            <option value="dnr-dni">DNR/DNI</option>
-            <option value="comfort">Comfort Care</option>
-          </select>
-        </div>
-      </div>
-    </div>
+        </section>
 
-    <!-- P — Patient Summary -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <div class="form-section-letter letter-P">P</div>
-        <div>
-          <div class="form-section-title">Patient Summary</div>
-          <div class="form-section-subtitle">Key clinical information for the receiving provider</div>
-        </div>
-      </div>
-      <div class="form-section-body">
-        <div class="form-group">
-          <label class="form-label" for="one-liner">One-Liner *</label>
-          <input type="text" class="form-input" id="one-liner" name="one_liner" placeholder="e.g., 67M with STEMI s/p cath lab activation, awaiting cardiology">
-          <div class="form-hint">Brief summary statement — the first thing the receiver hears</div>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="hpi">HPI Summary</label>
-          <textarea class="form-textarea" id="hpi" name="hpi_summary" rows="3" placeholder="Relevant history of present illness..."></textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="pmh">Pertinent PMH</label>
-            <textarea class="form-textarea" id="pmh" name="pertinent_pmh" rows="2" placeholder="Relevant past history..."></textarea>
+        <section class="section" id="sec-p" aria-labelledby="h-p">
+          <div class="divider" aria-hidden="true"><span class="letter">P</span><span class="word">Patient</span></div>
+          <div class="sec-page">
+            <header class="sec-head"><h2 id="h-p">Patient summary</h2><p>Key clinical information for the receiving provider</p></header>
+            <div class="field">
+              <label for="one-liner">One-liner <span class="req">*</span></label>
+              <input type="text" class="input" id="one-liner" name="one_liner" placeholder="e.g., 67M with STEMI s/p cath lab activation, awaiting cardiology">
+              <span class="hint">Brief summary statement: the first thing the receiver hears</span>
+            </div>
+            <div class="field">
+              <label for="hpi">HPI summary</label>
+              <textarea class="ruled" id="hpi" name="hpi_summary" rows="3" placeholder="Relevant history of present illness..."></textarea>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="pmh">Pertinent PMH</label>
+                <textarea class="ruled" id="pmh" name="pertinent_pmh" rows="2" placeholder="Relevant past history..."></textarea>
+              </div>
+              <div class="field">
+                <label for="meds">Key medications</label>
+                <textarea class="ruled" id="meds" name="key_meds" rows="2" placeholder="Current relevant medications..."></textarea>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label for="labs">Key labs</label>
+                <textarea class="ruled" id="labs" name="key_labs" rows="2" placeholder="Relevant lab results..."></textarea>
+              </div>
+              <div class="field">
+                <label for="imaging">Key imaging</label>
+                <textarea class="ruled" id="imaging" name="key_imaging" rows="2" placeholder="Relevant imaging findings..."></textarea>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="meds">Key Medications</label>
-            <textarea class="form-textarea" id="meds" name="key_meds" rows="2" placeholder="Current relevant medications..."></textarea>
+        </section>
+
+        <section class="section" id="sec-a" aria-labelledby="h-a">
+          <div class="divider" aria-hidden="true"><span class="letter">A</span><span class="word">Actions</span></div>
+          <div class="sec-page">
+            <header class="sec-head"><h2 id="h-a">Action list</h2><p>To-do items for the receiving provider</p></header>
+            <div class="action-rows" id="action-items"></div>
+            <button type="button" class="add-row" id="add-action">+ Add action item</button>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="labs">Key Labs</label>
-            <textarea class="form-textarea" id="labs" name="key_labs" rows="2" placeholder="Relevant lab results..."></textarea>
+        </section>
+
+        <section class="section" id="sec-s1" aria-labelledby="h-s1">
+          <div class="divider" aria-hidden="true"><span class="letter">S</span><span class="word">Awareness</span></div>
+          <div class="sec-page">
+            <header class="sec-head"><h2 id="h-s1">Situational awareness</h2><p>What to watch for and contingency plans</p></header>
+            <div class="field">
+              <label for="contingency">Contingency plan</label>
+              <textarea class="ruled" id="contingency" name="contingency_plan" rows="2" placeholder="If X happens, then Y..."></textarea>
+            </div>
+            <div class="field">
+              <label for="watch-for">What to watch for</label>
+              <textarea class="ruled" id="watch-for" name="what_to_watch" rows="2" placeholder="Anticipated changes or concerns..."></textarea>
+            </div>
+            <div class="field">
+              <label for="anticipated">Anticipated changes</label>
+              <textarea class="ruled" id="anticipated" name="anticipated_changes" rows="2" placeholder="Expected clinical trajectory..."></textarea>
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="imaging">Key Imaging</label>
-            <textarea class="form-textarea" id="imaging" name="key_imaging" rows="2" placeholder="Relevant imaging findings..."></textarea>
+        </section>
+
+        <section class="section pending" id="sec-s2" aria-labelledby="h-s2">
+          <div class="divider" aria-hidden="true"><span class="letter">S</span><span class="word">Synthesis</span></div>
+          <div class="sec-page">
+            <header class="sec-head"><h2 id="h-s2">Synthesis by receiver</h2><p>Completed by the receiving provider after read-back</p></header>
+            <div class="field">
+              <label for="receiver-summary-preview">Receiver summary</label>
+              <textarea class="ruled" id="receiver-summary-preview" disabled placeholder="The receiving provider summarizes their understanding here once the handoff is sent..."></textarea>
+              <span class="hint">This page opens for the receiver after the handoff is sent</span>
+            </div>
           </div>
-        </div>
+        </section>
+
       </div>
+      <nav class="index" aria-label="Jump to section">
+        <a href="#sec-i" title="Illness severity">I</a>
+        <a href="#sec-p" title="Patient summary">P</a>
+        <a href="#sec-a" title="Action list">A</a>
+        <a href="#sec-s1" title="Situational awareness">S</a>
+        <a href="#sec-s2" title="Synthesis by receiver">S</a>
+      </nav>
     </div>
 
-    <!-- A — Action List -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <div class="form-section-letter letter-A">A</div>
-        <div>
-          <div class="form-section-title">Action List</div>
-          <div class="form-section-subtitle">To-do items for the receiving provider</div>
-        </div>
-      </div>
-      <div class="form-section-body">
-        <div class="action-items-list" id="action-items">
-          <!-- Action items added dynamically -->
-        </div>
-        <button type="button" class="add-action-btn" id="add-action">+ Add Action Item</button>
-      </div>
-    </div>
-
-    <!-- S — Situational Awareness -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <div class="form-section-letter letter-S1">S</div>
-        <div>
-          <div class="form-section-title">Situational Awareness</div>
-          <div class="form-section-subtitle">What to watch for and contingency plans</div>
-        </div>
-      </div>
-      <div class="form-section-body">
-        <div class="form-group">
-          <label class="form-label" for="contingency">Contingency Plan</label>
-          <textarea class="form-textarea" id="contingency" name="contingency_plan" rows="2" placeholder="If X happens, then Y..."></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="watch-for">What to Watch For</label>
-          <textarea class="form-textarea" id="watch-for" name="what_to_watch" rows="2" placeholder="Anticipated changes or concerns..."></textarea>
-        </div>
-        <div class="form-group">
-          <label class="form-label" for="anticipated">Anticipated Changes</label>
-          <textarea class="form-textarea" id="anticipated" name="anticipated_changes" rows="2" placeholder="Expected clinical trajectory..."></textarea>
-        </div>
-      </div>
-    </div>
-
-    <!-- S — Synthesis (to be filled by receiver) -->
-    <div class="form-section" style="border: 2px dashed var(--border); opacity: 0.7;">
-      <div class="form-section-header">
-        <div class="form-section-letter letter-S2">S</div>
-        <div>
-          <div class="form-section-title">Synthesis by Receiver</div>
-          <div class="form-section-subtitle">Completed by the receiving provider after read-back</div>
-        </div>
-      </div>
-      <div class="form-section-body">
-        <div class="form-group">
-          <label class="form-label">Receiver Summary</label>
-          <textarea class="form-textarea" disabled placeholder="The receiving provider will summarize their understanding here after handoff is sent..."></textarea>
-          <div class="form-hint">This section becomes active after the handoff is sent to the receiver</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Submit -->
-    <div class="form-footer">
-      <button type="button" class="btn btn-outline" id="save-draft">Save Draft</button>
-      <div style="display:flex; gap: var(--sp-2);">
-        <button type="button" class="btn btn-outline">Preview</button>
-        <button type="submit" class="btn btn-primary btn-lg">Send Handoff</button>
-      </div>
-    </div>
-
+    {% with send_label = 'Send handoff' %}{% include "partials/sheet_foot.html" %}{% endwith %}
   </form>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/api.js"></script>
-<script src="/static/js/handoff-form.js"></script>
+<script src="/static/js/sheet-form.js"></script>
 {% endblock %}

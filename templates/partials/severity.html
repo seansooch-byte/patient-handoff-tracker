@@ -1,0 +1,7 @@
+<fieldset class="acuity-pick">
+  <legend>Illness severity</legend>
+  {% for key in ['critical', 'serious', 'watch', 'stable'] %}
+  <input type="radio" name="severity" id="sev-{{ key }}" value="{{ key }}"{% if key == 'watch' %} checked{% endif %}>
+  <label for="sev-{{ key }}" class="{{ key }}">{{ key | capitalize }}</label>
+  {% endfor %}
+</fieldset>

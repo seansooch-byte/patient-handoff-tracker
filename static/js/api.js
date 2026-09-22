@@ -1,5 +1,5 @@
 /**
- * API client — thin fetch() wrapper with error handling.
+ * API client: a thin fetch() wrapper with error handling.
  * All API calls go through this so auth/error handling is centralized.
  */
 

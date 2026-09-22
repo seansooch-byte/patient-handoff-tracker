@@ -1,62 +1,120 @@
 {% extends "base.html" %}
-{% block title %}Patient Board — Handoff Tracker{% endblock %}
+{% block title %}Patient Board · Handoff Tracker{% endblock %}
 {% block styles %}
 <link rel="stylesheet" href="/static/css/board.css">
 {% endblock %}
 
 {% block content %}
-<!-- Shift bar -->
-<div class="shift-bar">
-  <div class="shift-info">
-    <span class="shift-type">Night Shift</span>
-    <span class="shift-time">19:00 — 07:00</span>
-    <span style="color: var(--text-muted);">|</span>
-    <span>ED Main</span>
-  </div>
-  <div style="display:flex; align-items:center; gap: var(--sp-3);">
-    <div class="shift-team">
-      <div class="team-avatar" title="Dr. Chen">AC</div>
-      <div class="team-avatar" title="Dr. Patel">RP</div>
-      <div class="team-avatar" title="Dr. Williams">MW</div>
-    </div>
-    <button class="btn btn-outline btn-sm">Manage Shift</button>
-  </div>
-</div>
+<section class="shift-strip" id="shift-strip" aria-label="Current shift">
+  <span class="shift-name">Current shift</span>
+  <span class="shift-time muted">Loading...</span>
+</section>
 
-<!-- Board header -->
-<div class="board-header">
+<div class="board-head">
   <div>
-    <h1 class="page-title">Patient Board</h1>
-    <div class="board-stats" id="board-stats">
-      <span>Loading...</span>
+    <h1 class="title">Patient board</h1>
+    <p class="census" id="board-stats"><span>Loading...</span></p>
+  </div>
+  <div class="head-acts">
+    <button class="btn" type="button" id="next-handoff">Next handoff</button>
+    <button class="btn primary" type="button" id="new-patient">+ New patient</button>
+  </div>
+</div>
+
+<div class="filters" role="toolbar" aria-label="Filter patients">
+  <div class="filter-group">
+    <span class="label">Acuity</span>
+    <button class="chip on" type="button" data-filter="all" aria-pressed="true">All</button>
+    <button class="chip" type="button" data-filter="critical" aria-pressed="false">Critical</button>
+    <button class="chip" type="button" data-filter="serious" aria-pressed="false">Serious</button>
+    <button class="chip" type="button" data-filter="watch" aria-pressed="false">Watch</button>
+    <button class="chip" type="button" data-filter="stable" aria-pressed="false">Stable</button>
+  </div>
+  <div class="filter-group">
+    <span class="label">Dispo</span>
+    <button class="chip" type="button" data-filter="admit" aria-pressed="false">Admit</button>
+    <button class="chip" type="button" data-filter="discharge" aria-pressed="false">Discharge</button>
+    <button class="chip" type="button" data-filter="undecided" aria-pressed="false">Undecided</button>
+  </div>
+</div>
+
+<!-- The rack: one folder per patient, filled by board.js -->
+<div class="rack-grid" id="patient-grid">
+  <div class="empty"><p>Loading patients...</p></div>
+</div>
+
+<dialog class="chart-dialog" id="patient-dialog" aria-labelledby="patient-dialog-title">
+  <form id="patient-form">
+    <div class="dialog-head">
+      <h2 id="patient-dialog-title">New patient</h2>
+      <button class="btn ghost sm" type="button" data-close>Close</button>
     </div>
-  </div>
-  <div style="display:flex; gap: var(--sp-2);">
-    <button class="btn btn-primary">+ New Patient</button>
-    <button class="btn btn-outline">Start Handoff</button>
-  </div>
-</div>
-
-<!-- Filters -->
-<div class="board-filters">
-  <button class="filter-chip active" data-filter="all" onclick="setFilter('all')">All</button>
-  <button class="filter-chip" data-filter="critical" onclick="setFilter('critical')">Critical</button>
-  <button class="filter-chip" data-filter="serious" onclick="setFilter('serious')">Serious</button>
-  <button class="filter-chip" data-filter="stable" onclick="setFilter('stable')">Stable</button>
-  <button class="filter-chip" data-filter="watch" onclick="setFilter('watch')">Watch</button>
-  <span style="width: 1px; background: var(--border); margin: 0 var(--sp-1);"></span>
-  <button class="filter-chip" data-filter="admit" onclick="setFilter('admit')">Admit</button>
-  <button class="filter-chip" data-filter="discharge" onclick="setFilter('discharge')">Discharge</button>
-  <button class="filter-chip" data-filter="undecided" onclick="setFilter('undecided')">Undecided</button>
-</div>
-
-<!-- Patient grid — populated by board.js from API -->
-<div class="patient-grid" id="patient-grid">
-  <div class="empty-state"><p>Loading patients...</p></div>
-</div>
+    <div class="dialog-body">
+      <div class="notice">Synthetic data only. Never enter real patient information.</div>
+      <div class="field-row">
+        <div class="field">
+          <label for="np-name">Name <span class="req">*</span></label>
+          <input class="input" id="np-name" name="display_name" placeholder="Last, F." required>
+        </div>
+        <div class="field">
+          <label for="np-mrn">MRN <span class="req">*</span></label>
+          <input class="input" id="np-mrn" name="mrn" inputmode="numeric" required>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="np-age">Age</label>
+          <input class="input" id="np-age" name="age" type="number" min="0" max="120" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label for="np-sex">Sex</label>
+          <select class="select" id="np-sex" name="sex">
+            <option value="U">Unknown</option>
+            <option value="M">M</option>
+            <option value="F">F</option>
+            <option value="O">Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="np-room">Room / bed</label>
+          <input class="input" id="np-room" name="room_bed" placeholder="T3">
+        </div>
+        <div class="field">
+          <label for="np-acuity">Acuity (ESI)</label>
+          <select class="select" id="np-acuity" name="acuity">
+            <option value="1">ESI 1 · Critical</option>
+            <option value="2">ESI 2 · Serious</option>
+            <option value="3" selected>ESI 3 · Watch</option>
+            <option value="4">ESI 4 · Stable</option>
+            <option value="5">ESI 5 · Stable</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label for="np-cc">Chief complaint</label>
+        <input class="input" id="np-cc" name="chief_complaint">
+      </div>
+      <div class="field">
+        <label for="np-dispo">Disposition</label>
+        <select class="select" id="np-dispo" name="disposition">
+          <option value="undecided" selected>Undecided</option>
+          <option value="admit">Admit</option>
+          <option value="discharge">Discharge</option>
+          <option value="observe">Observe</option>
+          <option value="transfer">Transfer</option>
+        </select>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <button class="btn" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit">Add to board</button>
+    </div>
+  </form>
+</dialog>
 {% endblock %}
 
 {% block scripts %}
-<script src="/static/js/api.js"></script>
 <script src="/static/js/board.js"></script>
 {% endblock %}
